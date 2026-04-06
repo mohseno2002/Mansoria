@@ -1,0 +1,19 @@
+{
+  "name": "ترعة المنصورية — Digital Twin v6",
+  "short_name": "المنصورية",
+  "description": "نظام التوأم الرقمى لترعة المنصورية — إدارة عامة رى الجيزة",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#030b15",
+  "theme_color": "#030b15",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/mohseno2002/mohseno2002.github.io/main/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

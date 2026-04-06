@@ -1,0 +1,2720 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ترعة المنصورية — Digital Twin v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#030b15;--bg2:#07111e;--bg3:#0c1d30;
+  --cyan:#00e5ff;--green:#00e676;--amber:#ffca28;--red:#ff3d57;
+  --purple:#7c4dff;--orange:#ff6d00;
+  --tx1:#e0f4ff;--tx2:#5a8aad;--tx3:#243c52;
+  --ln:rgba(0,229,255,.1);--ln2:rgba(0,229,255,.22);
+  --topbar:44px;--nav:60px;--r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx1);font-size:14px}
+
+/* LAYOUT */
+#app{display:grid;height:100dvh;grid-template-rows:var(--topbar) 1fr;grid-template-columns:var(--nav) 1fr;grid-template-areas:"topbar topbar" "nav content";}
+
+/* TOPBAR */
+#topbar{grid-area:topbar;display:flex;align-items:center;gap:8px;padding:0 12px;background:rgba(3,11,21,.97);border-bottom:1px solid var(--ln);z-index:100;overflow:hidden;}
+.tb-logo{font-size:18px;flex-shrink:0}
+.tb-title{font-size:.78rem;font-weight:900;color:var(--tx1);white-space:nowrap;flex-shrink:0}
+.tb-title span{color:var(--cyan)}
+.tb-metrics{display:flex;align-items:center;gap:0;flex:1;overflow:hidden;margin:0 8px}
+.tb-m{display:flex;align-items:center;gap:4px;padding:0 8px;border-left:1px solid var(--ln);white-space:nowrap;flex-shrink:0}
+.tb-m:last-child{border-left:none}
+.tb-ml{font-size:.52rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px}
+.tb-mv{font-family:'IBM Plex Mono',monospace;font-size:.72rem;font-weight:600;color:var(--cyan)}
+.tb-mv.ok{color:var(--green)}.tb-mv.warn{color:var(--amber)}.tb-mv.bad{color:var(--red)}
+.tb-live{display:flex;align-items:center;gap:4px;font-size:.58rem;color:var(--green);font-weight:700;flex-shrink:0}
+.tb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;box-shadow:0 0 6px var(--green)}
+.tb-clock{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--tx2);flex-shrink:0;margin-right:4px}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+@media(max-width:767px){.tb-metrics{display:none}.tb-title{font-size:.7rem}}
+
+/* NAV */
+#nav{grid-area:nav;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;background:rgba(3,11,21,.98);border-right:1px solid var(--ln);padding:6px 0;gap:2px;scrollbar-width:none;z-index:100;}
+#nav::-webkit-scrollbar{display:none}
+.nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;min-width:60px;min-height:54px;border:none;background:none;color:var(--tx3);cursor:pointer;transition:all .15s;position:relative;font-family:'Cairo',sans-serif;flex-shrink:0;border-radius:8px;width:100%;}
+.nav-btn .nb-icon{font-size:18px;line-height:1}
+.nav-btn .nb-label{font-size:.42rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.nav-btn:hover{color:var(--tx2);background:rgba(0,229,255,.05)}
+.nav-btn.active{color:var(--cyan);background:rgba(0,229,255,.1)}
+.nav-btn.active::after{content:'';position:absolute;right:0;top:20%;width:2px;height:60%;background:var(--cyan);border-radius:2px;box-shadow:0 0 6px var(--cyan);}
+.nav-sep{background:var(--ln);flex-shrink:0;height:1px;width:36px;margin:2px 8px;align-self:center}
+
+/* CONTENT — SPLIT VIEW */
+#content{grid-area:content;position:relative;overflow:hidden;background:var(--bg);display:flex;flex-direction:row;min-height:0;min-width:0;}
+#main-view{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;transition:flex .32s cubic-bezier(.4,0,.2,1);}
+#content.panel-open #main-view{flex:0 0 70%;max-width:70%;}
+#side-panel{flex:0 0 0%;max-width:0;overflow:hidden;display:flex;flex-direction:column;background:var(--bg2);border-right:1px solid var(--ln2);transition:flex .32s cubic-bezier(.4,0,.2,1),max-width .32s cubic-bezier(.4,0,.2,1);position:relative;}
+#content.panel-open #side-panel{flex:0 0 30%;max-width:30%;border-right:none;border-left:1px solid var(--ln2);}
+#side-panel-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--ln);background:rgba(3,11,21,.97);flex-shrink:0;min-height:36px;}
+#side-panel-title{font-size:.75rem;font-weight:900;color:var(--cyan);display:flex;align-items:center;gap:6px;}
+#side-panel-close{background:none;border:none;color:var(--tx2);font-size:.85rem;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;transition:color .15s;}
+#side-panel-close:hover{color:var(--tx1)}
+#side-panel-body{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-width:thin;scrollbar-color:var(--ln2) transparent;}
+#panel-divider{width:4px;background:var(--ln);flex-shrink:0;cursor:col-resize;transition:background .2s;display:none;align-self:stretch;}
+#content.panel-open #panel-divider{display:block;}
+#panel-divider:hover{background:var(--cyan);}
+@media(max-width:600px){
+  #content.panel-open #main-view{flex:0 0 0%;max-width:0;overflow:hidden;}
+  #content.panel-open #side-panel{flex:0 0 100%;max-width:100%;}
+  #content.panel-open #panel-divider{display:none;}
+}
+
+/* TABS */
+#main-view .tab{display:none;flex-direction:column;overflow:hidden;flex:1;height:100%;min-height:0}
+#main-view .tab.active{display:flex}
+#side-panel-body .tab{display:none;flex-direction:column;height:auto;overflow-y:visible;flex:unset;min-height:0;}
+#side-panel-body .tab.scroll{overflow-y:auto;}
+#side-panel-body .tab.active{display:flex;flex-direction:column;}
+#side-panel-body .node-list{max-height:calc(100dvh - var(--topbar) - 80px);overflow-y:auto;}
+#side-panel-body .heat-table{max-height:260px;overflow-y:auto;}
+
+#tab-sankey{background:#dce8f0}
+#tab-sankey{display:none;flex-direction:column;height:100%;overflow:hidden}
+#tab-sankey.active{display:flex!important}
+#main-view{display:flex;flex-direction:column;overflow:hidden;}
+.sk-kpis{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid rgba(80,140,200,.25);flex-shrink:0;background:rgba(220,232,240,.98);}
+.sk-kpi{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px;border-left:1px solid rgba(80,140,200,.18);gap:1px;}
+.sk-kpi:last-child{border-left:none}
+.sk-kpi .kl{font-size:.5rem;color:#6090b0;text-transform:uppercase;letter-spacing:.4px}
+.sk-kpi .kv{font-family:'IBM Plex Mono',monospace;font-size:.9rem;font-weight:700;color:#0d2a40}
+.sk-kpi .ku{font-size:.48rem;color:#5080a0}
+.kv.ok{color:#1b7a3e}.kv.warn{color:#b56800}.kv.bad{color:#c0392b}
+.sk-ctrl{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid rgba(80,140,200,.22);flex-shrink:0;overflow-x:auto;scrollbar-width:none;background:rgba(230,240,248,.98);}
+.sk-ctrl::-webkit-scrollbar{display:none}
+.sk-btn{padding:4px 10px;border-radius:6px;border:1px solid rgba(30,100,180,.25);background:rgba(255,255,255,.7);color:#2a5a80;font-family:'Cairo',sans-serif;font-size:.62rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .18s ease;flex-shrink:0;}
+.sk-btn:hover,.sk-btn.on{background:rgba(30,100,180,.15);color:#0d2a50;border-color:rgba(30,100,180,.5);transform:translateY(-1px);box-shadow:0 4px 12px rgba(30,100,180,.15)}
+.sk-btn.play.on{background:rgba(30,160,100,.15);color:#0a4a25;border-color:rgba(30,160,100,.4)}
+.sk-btn.ghost{background:rgba(255,255,255,.4);border-color:rgba(80,140,200,.15)}
+.sk-spacer{flex:1;min-width:4px}
+.sk-live{font-size:.6rem;color:#1b7a3e;font-family:'IBM Plex Mono',monospace;white-space:nowrap;flex-shrink:0}
+.sk-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid rgba(30,100,180,.2);border-radius:999px;background:rgba(30,100,180,.07);font-size:.58rem;color:#2a5a80;white-space:nowrap;flex-shrink:0}
+.sk-badge b{font-family:'IBM Plex Mono',monospace;color:var(--cyan);font-weight:700}
+#skWrap{flex:1;position:relative;overflow:hidden;touch-action:none;min-height:260px;background:#dce8f0}
+#skCanvas{display:block;width:100%;height:100%;touch-action:none}
+#skMiniMap{position:absolute;left:12px;bottom:12px;width:190px;height:104px;border:1px solid rgba(80,140,200,.45);border-radius:12px;background:rgba(220,232,240,.95);backdrop-filter:blur(6px);box-shadow:0 8px 28px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.5);z-index:12;pointer-events:none}
+@media(max-width:767px){#skWrap{min-height:220px}#skMiniMap{width:136px;height:78px;left:8px;bottom:8px}}
+#skTip{position:absolute;display:none;background:rgba(255,255,255,.97);border:1px solid rgba(60,140,200,.4);border-radius:10px;padding:10px 13px;font-size:.68rem;color:#1a3a52;pointer-events:none;z-index:50;min-width:180px;max-width:240px;box-shadow:0 8px 28px rgba(0,0,0,.18);}
+#skTip .tt-name{font-weight:800;font-size:.76rem;margin-bottom:6px;color:#0d3050}
+#skTip .tt-row{display:flex;justify-content:space-between;gap:12px;padding:2px 0;color:#4a7090}
+#skTip .tt-row span:last-child{font-family:'IBM Plex Mono',monospace;color:#0d2a40;font-weight:600}
+.sk-legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:5px 10px;border-top:1px solid rgba(80,140,200,.2);flex-shrink:0;background:rgba(220,232,240,.97);font-size:.58rem;color:#3a6080;overflow-x:auto;scrollbar-width:none;}
+.sk-legend::-webkit-scrollbar{display:none}
+.leg-item{display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0}
+.leg-dot{width:10px;height:6px;border-radius:3px;flex-shrink:0}
+.sk-footer{margin-right:auto;font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#1a5a80;flex-shrink:0}
+
+/* TAB: NODES */
+#tab-nodes .tab-header{padding:10px 14px;border-bottom:1px solid var(--ln);flex-shrink:0;display:flex;align-items:center;gap:8px;background:rgba(3,11,21,.95);position:sticky;top:0;z-index:5}
+#tab-nodes .tab-header h2{font-size:.82rem;font-weight:900;color:var(--cyan);flex-shrink:0}
+#nodeSearch{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--ln);border-radius:6px;padding:5px 10px;color:var(--tx1);font-family:'Cairo',sans-serif;font-size:.7rem;outline:none;}
+#nodeSearch::placeholder{color:var(--tx3)}
+.node-list{flex:1;overflow-y:auto;padding:8px}
+.node-card{background:var(--bg2);border:1px solid var(--ln);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s;}
+.node-card:active,.node-card:hover{border-color:var(--ln2);background:var(--bg3)}
+.node-card.warn{border-color:rgba(255,202,40,.25)}
+.node-card.alert{border-color:rgba(255,61,87,.3)}
+.nc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.nc-name{font-size:.72rem;font-weight:700;color:var(--tx1)}
+.nc-badge{font-size:.55rem;font-weight:800;padding:2px 7px;border-radius:999px;flex-shrink:0}
+.nc-badge.ok{background:rgba(0,230,118,.12);color:var(--green);border:1px solid rgba(0,230,118,.2)}
+.nc-badge.warn{background:rgba(255,202,40,.1);color:var(--amber);border:1px solid rgba(255,202,40,.2)}
+.nc-badge.alert{background:rgba(255,61,87,.1);color:var(--red);border:1px solid rgba(255,61,87,.2)}
+.nc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.nc-cell{background:rgba(0,0,0,.2);border-radius:6px;padding:4px 6px;text-align:center}
+.nc-cell .cl{font-size:.48rem;color:var(--tx3);text-transform:uppercase}
+.nc-cell .cv{font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:var(--tx1);font-weight:600}
+
+/* Node modal */
+#nodeModal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:none;align-items:flex-end;justify-content:center;}
+#nodeModal.open{display:flex}
+.nm-panel{background:var(--bg2);border-radius:20px 20px 0 0;border:1px solid var(--ln2);width:100%;max-width:520px;max-height:80dvh;overflow-y:auto;padding:16px 16px 24px;position:relative;}
+.nm-handle{width:36px;height:4px;background:var(--tx3);border-radius:2px;margin:0 auto 12px;}
+.nm-close{position:absolute;top:12px;left:12px;background:none;border:none;color:var(--tx2);font-size:1rem;cursor:pointer;}
+.nm-title{font-size:.9rem;font-weight:900;color:var(--tx1);margin-bottom:3px}
+.nm-sub{font-size:.62rem;color:var(--tx2);margin-bottom:12px}
+.nm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.nm-cell{background:var(--bg3);border-radius:8px;padding:8px 10px;text-align:center}
+.nm-cell .ml{font-size:.48rem;color:var(--tx3);text-transform:uppercase;margin-bottom:2px}
+.nm-cell .mv{font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:700;color:var(--tx1)}
+.nm-note{background:rgba(0,229,255,.06);border:1px solid var(--ln);border-radius:8px;padding:8px 10px;font-size:.62rem;color:var(--tx2);line-height:1.7}
+
+/* TAB: HEATMAP */
+.heat-header{padding:8px 12px;border-bottom:1px solid var(--ln);background:rgba(3,11,21,.97);flex-shrink:0;display:flex;flex-direction:column;gap:6px;}
+.heat-header h2{font-size:.78rem;font-weight:900;color:var(--cyan)}
+.heat-mode-btns{display:flex;gap:6px;flex-wrap:wrap}
+.heat-canvas-wrap{padding:10px 12px 0;flex-shrink:0;position:relative}
+#heatCanvas{width:100%;display:block;cursor:crosshair;border-radius:8px}
+#heatTip{position:absolute;display:none;background:rgba(3,11,21,.96);border:1px solid var(--ln2);border-radius:8px;padding:7px 10px;font-size:.62rem;color:var(--tx1);pointer-events:none;z-index:30;min-width:160px;}
+.heat-scale{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:.55rem;color:var(--tx3)}
+.heat-scale-bar{flex:1;height:6px;border-radius:3px;background:linear-gradient(90deg,#00e676,#ffca28,#ff6d00,#ff3d57)}
+.heat-scale-lbl{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--cyan);margin-right:auto}
+.heat-table{overflow-y:auto;padding:4px 8px 8px}
+.heat-row{display:grid;gap:4px;padding:5px 6px;font-size:.6rem;border-bottom:1px solid rgba(255,255,255,.03)}
+.heat-row.header{font-weight:700;color:var(--tx3);text-transform:uppercase;font-size:.5rem;position:sticky;top:0;background:var(--bg2);z-index:2}
+.heat-row:hover{background:rgba(255,255,255,.03);cursor:pointer}
+.mono{font-family:'IBM Plex Mono',monospace}
+
+/* TAB: HYDRAULICS */
+.tab-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid var(--ln);flex-shrink:0;background:rgba(3,11,21,.95);position:sticky;top:0;z-index:5}
+.tab-hdr h2{font-size:.82rem;font-weight:900;color:var(--cyan)}
+.hyd-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.hyd-kpi{background:var(--bg2);border:1px solid var(--ln);border-radius:8px;padding:8px 10px;text-align:center}
+.hyd-kpi .hl{font-size:.5rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.hyd-kpi .hv{font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:700;color:var(--tx1)}
+.hyd-kpi .hv.ok{color:var(--green)}.hyd-kpi .hv.warn{color:var(--amber)}.hyd-kpi .hv.bad{color:var(--red)}
+.hyd-bar-wrap{background:var(--bg2);border:1px solid var(--ln);border-radius:8px;padding:10px 12px}
+.hyd-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.hyd-bar-row:last-child{margin-bottom:0}
+.hyd-bar-lbl{font-size:.6rem;color:var(--tx2);width:72px;flex-shrink:0}
+.hyd-bar-track{flex:1;height:7px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.hyd-bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.hyd-bar-val{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--tx1);width:60px;flex-shrink:0}
+.hyd-eq{background:var(--bg3);border:1px solid var(--ln);border-radius:8px;padding:10px 12px;font-size:.65rem;color:var(--tx2);line-height:1.9}
+.hyd-eq .eq{font-family:'IBM Plex Mono',monospace;color:var(--cyan);font-size:.68rem;display:block;margin:2px 0}
+.hyd-warn{padding:8px 12px;border-radius:8px;font-size:.66rem;border:1px solid}
+.hyd-warn.ok{background:rgba(0,230,118,.07);border-color:rgba(0,230,118,.2);color:#b9f6ca}
+.hyd-warn.warn{background:rgba(255,202,40,.07);border-color:rgba(255,202,40,.2);color:#ffe082}
+.hyd-warn.bad{background:rgba(255,61,87,.07);border-color:rgba(255,61,87,.2);color:#ffcdd2}
+
+/* TAB: SCENARIOS */
+.scen-card{background:var(--bg2);border:1px solid var(--ln);border-radius:var(--r);padding:12px;cursor:pointer;transition:all .18s}
+.scen-card:active{transform:scale(.97)}
+.scen-card.active-scen{border-color:var(--cyan);background:rgba(0,229,255,.07)}
+.scen-card .sc-icon{font-size:1.4rem;margin-bottom:5px;display:block}
+.scen-card .sc-name{font-size:.74rem;font-weight:800;color:var(--tx1);margin-bottom:3px}
+.scen-card .sc-desc{font-size:.6rem;color:var(--tx2);line-height:1.5}
+.sr-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.66rem}
+.sr-row:last-child{border-bottom:none}
+.sr-row .sr-l{color:var(--tx2)}.sr-row .sr-v{font-family:'IBM Plex Mono',monospace;color:var(--tx1);font-weight:600}
+
+/* TAB: COMMAND */
+.cmd-header{padding:12px 14px;border-bottom:1px solid var(--ln);flex-shrink:0;background:rgba(3,11,21,.97)}
+.cmd-header h2{font-size:.82rem;font-weight:900;color:var(--cyan);margin-bottom:2px}
+.cmd-header p{font-size:.58rem;color:var(--tx2)}
+.cmd-body{padding:12px;display:grid;gap:10px}
+.cmd-section-title{font-size:.6rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.cmd-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.cmd-kpi{background:var(--bg3);border:1px solid var(--ln);border-radius:8px;padding:8px 10px}
+.cmd-kpi .kl{font-size:.5rem;color:var(--tx3);text-transform:uppercase;margin-bottom:3px}
+.cmd-kpi .kv{font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:700;color:var(--tx1)}
+.cmd-kpi .kv.ok{color:var(--green)}.cmd-kpi .kv.warn{color:var(--amber)}.cmd-kpi .kv.bad{color:var(--red)}
+.cmd-slider-wrap{background:var(--bg3);border:1px solid var(--ln);border-radius:8px;padding:10px 12px}
+.cmd-slider-top{display:flex;justify-content:space-between;margin-bottom:6px}
+.cmd-slider-lbl{font-size:.62rem;color:var(--tx2)}
+.cmd-slider-val{font-family:'IBM Plex Mono',monospace;font-size:.72rem;font-weight:700;color:var(--cyan)}
+input[type=range]{width:100%;accent-color:var(--cyan)}
+.cmd-btns{display:flex;gap:8px}
+.cmd-btn{flex:1;padding:8px 12px;border-radius:8px;border:none;font-family:'Cairo',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer;transition:all .18s}
+.cmd-btn.primary{background:linear-gradient(135deg,rgba(0,229,255,.22),rgba(0,229,255,.1));color:var(--cyan);border:1px solid rgba(0,229,255,.3)}
+.cmd-btn.secondary{background:rgba(255,255,255,.05);color:var(--tx2);border:1px solid var(--ln)}
+.cmd-btn.danger{background:rgba(255,61,87,.15);color:var(--red);border:1px solid rgba(255,61,87,.3)}
+.cmd-forecast{background:rgba(0,229,255,.06);border:1px solid var(--ln);border-radius:8px;padding:10px 12px;font-size:.65rem;color:var(--tx2);line-height:1.6}
+.cmd-alerts{display:grid;gap:5px}
+.cmd-alert{padding:7px 10px;border-radius:7px;font-size:.63rem;line-height:1.5}
+.cmd-alert.ok{background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.2);color:#b9f6ca}
+.cmd-alert.warn{background:rgba(255,202,40,.07);border:1px solid rgba(255,202,40,.2);color:#ffe082}
+.cmd-alert.alert{background:rgba(255,61,87,.07);border:1px solid rgba(255,61,87,.2);color:#ffcdd2}
+
+/* TAB: ROTATION (أدوار) */
+.rot-header{padding:10px 14px;border-bottom:1px solid var(--ln);background:rgba(3,11,21,.97);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.rot-header h2{font-size:.82rem;font-weight:900;color:var(--cyan)}
+.rot-legend{display:flex;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--ln);background:rgba(3,11,21,.9);}
+.rot-leg{display:flex;align-items:center;gap:5px;font-size:.58rem}
+.rot-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.rot-grid{padding:8px;display:grid;gap:5px;overflow-y:auto}
+.rot-card{border-radius:8px;padding:8px 10px;border:1px solid;cursor:pointer;transition:all .15s;}
+.rot-card:hover{filter:brightness(1.15)}
+.rot-card.dor-a{background:rgba(255,202,40,.08);border-color:rgba(255,202,40,.3)}
+.rot-card.dor-b{background:rgba(0,229,255,.07);border-color:rgba(0,229,255,.25)}
+.rot-card.dor-j{background:rgba(0,230,118,.07);border-color:rgba(0,230,118,.25)}
+.rot-card .rc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.rot-card .rc-name{font-size:.68rem;font-weight:700;color:var(--tx1)}
+.rot-card .rc-dor{font-size:.56rem;font-weight:800;padding:2px 7px;border-radius:999px}
+.dor-a .rc-dor{background:rgba(255,202,40,.15);color:var(--amber)}
+.dor-b .rc-dor{background:rgba(0,229,255,.12);color:var(--cyan)}
+.dor-j .rc-dor{background:rgba(0,230,118,.12);color:var(--green)}
+.rot-card .rc-info{display:flex;gap:10px;font-size:.58rem;color:var(--tx2)}
+.rot-card .rc-info span{font-family:'IBM Plex Mono',monospace}
+
+/* card shared */
+.card{background:var(--bg2);border:1px solid var(--ln);border-radius:var(--r);padding:10px 12px}
+.section-title{font-size:.62rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+
+/* TAB: ADVISOR */
+#tab-advisor{display:none;flex-direction:column;height:auto;overflow-y:visible;flex:unset;min-height:0;}
+#tab-advisor.active{display:flex;flex-direction:column;}
+.adv-header{padding:10px 14px;border-bottom:1px solid var(--ln);flex-shrink:0;background:rgba(3,11,21,.97);}
+.adv-header h2{font-size:.82rem;font-weight:900;color:var(--cyan);margin-bottom:2px}
+.adv-header p{font-size:.58rem;color:var(--tx2)}
+.adv-body{padding:10px;display:grid;gap:8px}
+.adv-struct-row{background:var(--bg3);border:1px solid var(--ln);border-radius:8px;padding:8px 10px}
+.adv-struct-name{font-size:.65rem;font-weight:700;color:var(--tx1);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.adv-struct-name span{font-size:.52rem;color:var(--tx3);font-family:'IBM Plex Mono',monospace}
+.adv-inputs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.adv-input-wrap{display:flex;flex-direction:column;gap:3px}
+.adv-input-lbl{font-size:.5rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.3px}
+.adv-input-row{display:flex;align-items:center;gap:5px}
+.adv-input-row input{flex:1;background:rgba(0,0,0,.4);border:1px solid var(--ln);border-radius:5px;color:var(--tx1);padding:5px 7px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;outline:none;width:0;min-width:0;transition:border-color .15s}
+.adv-input-row input:focus{border-color:var(--cyan)}
+.adv-diff{font-size:.6rem;font-weight:700;min-width:44px;font-family:'IBM Plex Mono',monospace}
+.adv-diff.ok{color:var(--green)}.adv-diff.warn{color:var(--amber)}.adv-diff.bad{color:var(--red)}
+.adv-flow-wrap{background:rgba(255,109,0,.06);border:1px solid rgba(255,109,0,.25);border-radius:8px;padding:8px 10px}
+.adv-btn{width:100%;padding:11px;border:none;border-radius:8px;background:linear-gradient(135deg,rgba(0,229,255,.2),rgba(0,229,255,.08));color:var(--cyan);font-family:'Cairo',sans-serif;font-size:.75rem;font-weight:800;cursor:pointer;border:1px solid rgba(0,229,255,.3);transition:all .18s;letter-spacing:.3px}
+.adv-btn:disabled{opacity:.4;cursor:not-allowed}
+.adv-btn:not(:disabled):hover{background:linear-gradient(135deg,rgba(0,229,255,.3),rgba(0,229,255,.12));box-shadow:0 0 16px rgba(0,229,255,.2)}
+.adv-result{background:linear-gradient(135deg,rgba(0,229,255,.04),rgba(0,0,0,.2));border:1px solid rgba(0,229,255,.25);border-radius:10px;padding:12px 14px;}
+.adv-result-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--ln)}
+.adv-result-hdr h3{font-size:.75rem;font-weight:900;color:var(--cyan)}
+.adv-result-hdr p{font-size:.52rem;color:var(--tx2);margin-right:auto}
+.adv-result-body{font-size:.65rem;color:#cce8ff;line-height:1.85;white-space:pre-wrap}
+.adv-result-body .adv-section{font-weight:800;color:var(--cyan);font-size:.68rem;margin-top:10px;margin-bottom:3px;padding-right:8px;border-right:2px solid var(--cyan);display:block}
+.adv-legend{display:flex;gap:10px;flex-wrap:wrap;padding:6px 0;font-size:.52rem;color:var(--tx3)}
+.adv-leg-item{display:flex;align-items:center;gap:4px}
+.adv-leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.adv-loading{display:flex;align-items:center;justify-content:center;gap:8px;padding:20px;color:var(--cyan);font-size:.7rem}
+.adv-spinner{width:16px;height:16px;border:2px solid rgba(0,229,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.adv-error{background:rgba(255,61,87,.07);border:1px solid rgba(255,61,87,.25);border-radius:8px;padding:10px;font-size:.65rem;color:#ffcdd2}
+.adv-dor-sel{display:flex;gap:6px;flex-wrap:wrap}
+.adv-dor-btn{padding:5px 14px;border-radius:6px;border:1px solid var(--ln);background:none;color:var(--tx3);font-family:'Cairo',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer;transition:all .15s}
+.adv-dor-btn.active{border-color:var(--cyan);background:rgba(0,229,255,.1);color:var(--cyan)}
+</style>
+<link rel="manifest" href="manifest.json">
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+</script>
+</head>
+<body>
+<div id="app">
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <span class="tb-logo">💧</span>
+  <span class="tb-title">ترعة المنصورية <span>Digital Twin v5</span></span>
+  <div class="tb-metrics">
+    <div class="tb-m"><span class="tb-ml">Q مأخذ</span><span class="tb-mv" id="tbQ">—</span><span class="tb-ml">م³/ث</span></div>
+    <div class="tb-m"><span class="tb-ml">Q نشط</span><span class="tb-mv ok" id="tbQActive">—</span><span class="tb-ml">م³/ث</span></div>
+    <div class="tb-m"><span class="tb-ml">الزمام</span><span class="tb-mv ok">24,745</span><span class="tb-ml">فدان</span></div>
+    <div class="tb-m"><span class="tb-ml">الفروع</span><span class="tb-mv ok">41</span></div>
+    <div class="tb-m" id="tbDorWrap">
+      <span class="tb-ml">الدور الحالي</span>
+      <span class="tb-mv" id="tbDor" style="font-weight:900">—</span>
+    </div>
+    <div class="tb-m" id="tbDayWrap">
+      <span class="tb-ml">اليوم</span>
+      <span class="tb-mv" id="tbDayNum" style="color:var(--amber)">—</span>
+      <span class="tb-ml" id="tbDayOf">/5</span>
+    </div>
+    <div class="tb-m">
+      <span class="tb-ml">ينتهي</span>
+      <span class="tb-mv" id="tbDorEnd" style="color:var(--tx2)">—</span>
+    </div>
+    <div class="tb-m">
+      <span class="tb-ml">التالي</span>
+      <span class="tb-mv" id="tbNextDor" style="color:var(--tx2)">—</span>
+    </div>
+    <div class="tb-m"><span class="tb-ml">تنبيهات</span><span class="tb-mv warn" id="tbAlerts">0</span></div>
+    <div class="tb-m"><span class="tb-mv" id="tbScen" style="color:var(--cyan)">متوازن</span></div>
+  </div>
+  <div class="tb-live"><span class="tb-dot"></span><span>مباشر</span></div>
+  <div class="tb-clock" id="tbClock">--:--:--</div>
+</div>
+
+<!-- NAV -->
+<nav id="nav">
+  <button class="nav-btn active" data-tab="sankey"     onclick="go('sankey')">    <span class="nb-icon">🌊</span><span class="nb-label">الشبكة</span></button>
+  <button class="nav-btn"        data-tab="nodes"      onclick="go('nodes')">     <span class="nb-icon">📋</span><span class="nb-label">الترع</span></button>
+  <button class="nav-btn"        data-tab="rotation"   onclick="go('rotation')">  <span class="nb-icon">🔄</span><span class="nb-label">الأدوار</span></button>
+  <button class="nav-btn"        data-tab="heat"       onclick="go('heat')">      <span class="nb-icon">🌡️</span><span class="nb-label">حراري</span></button>
+  <button class="nav-btn"        data-tab="hydraulics" onclick="go('hydraulics')"><span class="nb-icon">📐</span><span class="nb-label">هيدروليك</span></button>
+  <button class="nav-btn"        data-tab="scenarios"  onclick="go('scenarios')"> <span class="nb-icon">🎭</span><span class="nb-label">سيناريو</span></button>
+  <div class="nav-sep"></div>
+  <button class="nav-btn"        data-tab="command"    onclick="go('command')">   <span class="nb-icon">⚡</span><span class="nb-label">تحكم</span></button>
+  <div class="nav-sep"></div>
+  <button class="nav-btn"        data-tab="advisor"    onclick="go('advisor')">   <span class="nb-icon">🧠</span><span class="nb-label">مستشار</span></button>
+</nav>
+
+<!-- CONTENT -->
+<div id="content">
+<div id="main-view">
+
+<!-- TAB: SANKEY -->
+<div id="tab-sankey" class="tab active">
+  <div class="sk-kpis" id="skKpis"></div>
+  <div class="sk-ctrl">
+    <button class="sk-btn on" id="btnFlow"   onclick="skMode('flow')">💧 التصرف</button>
+    <button class="sk-btn"    id="btnPerc"   onclick="skMode('perc')">📊 النسبة</button>
+    <button class="sk-btn"    id="btnStatus" onclick="skMode('status')">⚠️ الحالة</button>
+    <button class="sk-btn ghost" id="btnFit"    onclick="skFitView(true)">🎯 احتواء</button>
+    <button class="sk-btn ghost" id="btnReset"  onclick="skResetView()">↺ إعادة</button>
+    <button class="sk-btn ghost" id="btnZoomIn" onclick="skZoomBy(1.16)">＋</button>
+    <button class="sk-btn ghost" id="btnZoomOut"onclick="skZoomBy(1/1.16)">－</button>
+    <span class="sk-badge">تكبير <b id="skZoomReadout">100%</b></span>
+    <span class="sk-spacer"></span>
+    <span class="sk-live" id="skLive">● مباشر</span>
+    <button class="sk-btn play" id="btnPlay" onclick="skToggleAnim()">▶ تدفق</button>
+  </div>
+  <div id="skWrap">
+    <canvas id="skCanvas"></canvas>
+    <canvas id="skMiniMap"></canvas>
+    <div id="skTip"></div>
+  </div>
+  <div class="sk-legend">
+    <span class="leg-item"><span class="leg-dot" style="background:#2196a8"></span>دور ب (ك٠–١٦.٢٧)</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#2e8f54"></span>دور جـ (ك١٦.٢٧–٢٨.٥٤)</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#c9882a"></span>دور أ (ك٢٨.٥٤–٣٧)</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#3ab8d8;opacity:.7"></span>ترعة رئيسية</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#e67e22;width:6px;height:12px;border-radius:2px"></span>حجز مناوبة</span>
+    <span class="leg-item" id="skLiveDor" style="padding:2px 8px;border-radius:999px;font-weight:800;font-size:.6rem"></span>
+    <span class="sk-footer" id="skFooter">المنصورية · 37 كم · حجز المنشية ك١٦.٢٧ · حجز الحواجر ك٢٨.٥٤</span>
+  </div>
+</div>
+
+</div><!-- #main-view -->
+<div id="panel-divider"></div>
+
+<!-- SIDE PANEL -->
+<div id="side-panel">
+  <div id="side-panel-header">
+    <div id="side-panel-title"><span id="side-panel-icon">📋</span><span id="side-panel-label">الترع</span></div>
+    <button id="side-panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div id="side-panel-body">
+
+<!-- TAB: NODES -->
+<div id="tab-nodes" class="tab">
+  <div class="tab-header">
+    <h2>قائمة الترع</h2>
+    <input id="nodeSearch" type="search" placeholder="ابحث..." oninput="filterNodes(this.value)">
+  </div>
+  <div class="node-list" id="nodeList"></div>
+</div>
+
+<!-- TAB: ROTATION -->
+<div id="tab-rotation" class="tab">
+  <!-- Live Rotation Banner -->
+  <div id="rotBanner" style="padding:10px 14px;border-bottom:1px solid var(--ln);background:rgba(0,0,0,.3)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div>
+        <div style="font-size:.58rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">الدور النشط الآن</div>
+        <div id="rotCurBig" style="font-size:1.1rem;font-weight:900;margin-top:2px">—</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:.55rem;color:var(--tx3)">اليوم</div>
+        <div id="rotDayBig" style="font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--amber);line-height:1">—</div>
+        <div id="rotDayOfBig" style="font-size:.6rem;color:var(--tx3)">من 5</div>
+      </div>
+      <div style="text-align:left">
+        <div style="font-size:.55rem;color:var(--tx3)">ينتهي</div>
+        <div id="rotEndBig" style="font-size:.75rem;font-weight:700;color:var(--tx2)">—</div>
+        <div style="font-size:.55rem;color:var(--tx3);margin-top:2px">التالي: <span id="rotNextBig" style="font-weight:700">—</span></div>
+      </div>
+    </div>
+    <!-- Progress Bar -->
+    <div style="background:var(--bg3);border-radius:4px;height:6px;overflow:hidden">
+      <div id="rotProgress" style="height:100%;border-radius:4px;transition:width .5s;background:var(--amber)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:.5rem;color:var(--tx3)">
+      <span id="rotStartLbl">—</span><span id="rotEndLbl">—</span>
+    </div>
+  </div>
+  <!-- Next 6 rotations -->
+  <div style="padding:8px 12px 4px;border-bottom:1px solid var(--ln)">
+    <div style="font-size:.55rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">الجدول القادم — 30 يوماً</div>
+    <div id="rotUpcoming" style="display:grid;gap:4px"></div>
+  </div>
+  <!-- Year Timeline -->
+  <div style="padding:8px 12px 4px;border-bottom:1px solid var(--ln)">
+    <div style="font-size:.55rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">مخطط السنة 2026</div>
+    <canvas id="rotYearCanvas" height="38" style="width:100%;display:block;border-radius:6px"></canvas>
+    <div style="display:flex;gap:10px;margin-top:5px;font-size:.52rem;color:var(--tx3)">
+      <span style="display:flex;align-items:center;gap:3px"><span style="background:#c9a84c;width:10px;height:6px;border-radius:2px;display:inline-block"></span>دور أ</span>
+      <span style="display:flex;align-items:center;gap:3px"><span style="background:#4fa8c5;width:10px;height:6px;border-radius:2px;display:inline-block"></span>دور ب</span>
+      <span style="display:flex;align-items:center;gap:3px"><span style="background:#4db87a;width:10px;height:6px;border-radius:2px;display:inline-block"></span>دور جـ</span>
+    </div>
+  </div>
+  <div class="rot-header" style="border-bottom:1px solid var(--ln)">
+    <h2>الترع حسب الدور</h2>
+    <span style="font-family:monospace;font-size:.62rem;color:var(--tx2)" id="rotCount"></span>
+  </div>
+  <div class="rot-legend">
+    <span class="rot-leg"><span class="rot-dot" style="background:var(--amber)"></span>دور أ (ك٢٨.٥٤→٣٧)</span>
+    <span class="rot-leg"><span class="rot-dot" style="background:var(--cyan)"></span>دور ب (ك٠→١٦.٢٧)</span>
+    <span class="rot-leg"><span class="rot-dot" style="background:var(--green)"></span>دور جـ (ك١٦.٢٧→٢٨.٥٤)</span>
+  </div>
+  <div class="rot-grid" id="rotGrid"></div>
+</div>
+
+<!-- TAB: HEATMAP -->
+<div id="tab-heat" class="tab">
+  <div class="heat-header">
+    <h2>خريطة حرارية — 37 كم</h2>
+    <div class="heat-mode-btns">
+      <button class="sk-btn on" id="hBtnBed"   onclick="hMode('bed')">منسوب قاع</button>
+      <button class="sk-btn"    id="hBtnMax"   onclick="hMode('max')">أقصى منسوب</button>
+      <button class="sk-btn"    id="hBtnLen"   onclick="hMode('len')">الطول</button>
+      <button class="sk-btn"    id="hBtnFed"   onclick="hMode('fed')">الزمام</button>
+    </div>
+  </div>
+  <div class="heat-canvas-wrap">
+    <canvas id="heatCanvas" height="90"></canvas>
+    <div id="heatTip"></div>
+  </div>
+  <div class="heat-scale">
+    <span>منخفض</span><div class="heat-scale-bar"></div><span>مرتفع</span>
+    <span class="heat-scale-lbl" id="hScaleLbl"></span>
+  </div>
+  <div class="heat-table" id="heatTable"></div>
+</div>
+
+<!-- TAB: HYDRAULICS -->
+<div id="tab-hydraulics" class="tab scroll">
+  <div class="tab-hdr">
+    <h2>📐 الحسابات الهيدروليكية</h2>
+    <select id="hydSel" onchange="renderHydraulics()" style="background:var(--bg3);border:1px solid var(--ln);color:var(--tx1);border-radius:6px;padding:4px 8px;font-family:'Cairo',sans-serif;font-size:.7rem;flex-shrink:0"></select>
+  </div>
+  <!-- Orifice Gate Control -->
+  <div style="padding:10px 12px;border-bottom:1px solid var(--ln);background:rgba(0,229,255,.04)">
+    <div style="font-size:.58rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🚪 بوابة مأخذ المنصورية — Orifice Flow</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" id="hydGateSlider" min="0.1" max="4.0" step="0.1" value="1.8" oninput="onHydGate(this.value)" style="flex:1">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--cyan);min-width:38px" id="hydGateVal">1.8م</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px" id="orificeKpis"></div>
+  </div>
+  <div id="hydBody" style="padding:12px;display:grid;gap:10px"></div>
+  <!-- Cross Section Canvas -->
+  <div style="padding:10px 12px;border-top:1px solid var(--ln)">
+    <div style="font-size:.58rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">القطاع العرضي — Cross Section</div>
+    <canvas id="hydCanvas" height="140" style="width:100%;display:block;border-radius:8px;background:rgba(0,0,0,.2)"></canvas>
+  </div>
+  <!-- Longitudinal Profile Canvas -->
+  <div style="padding:10px 12px;border-top:1px solid var(--ln)">
+    <div style="font-size:.58rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">القطاع الطولي HGL/EGL — 37 كم</div>
+    <canvas id="hydLongCanvas" height="130" style="width:100%;display:block;border-radius:8px;background:rgba(0,0,0,.2)"></canvas>
+  </div>
+  <div id="hydProfile" style="padding:10px 12px;border-top:1px solid var(--ln)"></div>
+</div>
+
+<!-- TAB: SCENARIOS -->
+<div id="tab-scenarios" class="tab scroll">
+  <div class="tab-hdr"><h2>🎭 السيناريوهات التشغيلية</h2></div>
+  <div style="padding:12px;display:grid;gap:10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="scenCards"></div>
+    <div class="card" id="scenResult" style="display:none">
+      <div class="section-title">نتائج السيناريو</div>
+      <div id="scenResultBody" style="display:grid;gap:6px;margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">ضبط يدوي</div>
+      <div style="display:grid;gap:10px;margin-top:8px">
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:.62rem;color:var(--tx2)">معامل التصرف</span><span class="mono" id="sfInflow" style="font-size:.7rem;color:var(--cyan)">1.00</span></div>
+          <input type="range" min="0.5" max="1.5" step="0.01" value="1" oninput="onScenSlider('inflow',this.value)">
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:.62rem;color:var(--tx2)">فتحة البوابة %</span><span class="mono" id="sfGate" style="font-size:.7rem;color:var(--cyan)">62%</span></div>
+          <input type="range" min="15" max="95" value="62" oninput="onScenSlider('gate',this.value)">
+        </div>
+        <button class="cmd-btn primary" onclick="applyCustomScen()">▶ تطبيق السيناريو المخصص</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: COMMAND -->
+<div id="tab-command" class="tab scroll">
+  <div class="cmd-header">
+    <h2>⚡ مركز التشغيل الذكي</h2>
+    <p>تنبؤ سريع · تشغيل البوابات · إنذارات ديناميكية</p>
+  </div>
+  <div class="cmd-body">
+    <div>
+      <div class="cmd-section-title">المؤشرات الفورية</div>
+      <div class="cmd-kpis" id="cmdKpis"></div>
+    </div>
+    <div class="cmd-slider-wrap">
+      <div class="cmd-slider-top">
+        <span class="cmd-slider-lbl">فتحة بوابة مأخذ المنصورية %</span>
+        <span class="cmd-slider-val" id="gateVal">62%</span>
+      </div>
+      <input type="range" id="gateSlider" min="15" max="95" value="62" oninput="onGate(this.value)">
+    </div>
+    <div class="cmd-btns">
+      <button class="cmd-btn primary" id="cmdAutoBtn" onclick="toggleAuto()">▶ تشغيل ذكي</button>
+      <button class="cmd-btn secondary" onclick="rebalance()">⟳ موازنة الشبكة</button>
+    </div>
+    <div class="cmd-forecast" id="cmdForecast">جاهز.</div>
+    <div>
+      <div class="cmd-section-title">التنبيهات النشطة</div>
+      <div class="cmd-alerts" id="cmdAlerts"></div>
+    </div>
+    <div>
+      <div class="cmd-section-title">محاكاة الطوارئ</div>
+      <button class="cmd-btn danger" onclick="simulateBurst()" style="width:100%">💥 محاكاة طوارئ — كسر جسر</button>
+      <div id="burstResult" style="display:none;margin-top:8px;padding:10px;border-radius:8px;background:rgba(255,61,87,.08);border:1px solid rgba(255,61,87,.3);font-size:.65rem;color:#ffcdd2;line-height:1.7"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: ADVISOR -->
+<div id="tab-advisor" class="tab">
+  <div class="adv-header">
+    <h2>🧠 المستشار الهيدروليكى الذكى</h2>
+    <p>أدخل المناسيب الفعلية ← تحليل فورى وتوصيات دور العمالة</p>
+  </div>
+  <div class="adv-body">
+
+    <!-- دور العمالة -->
+    <div class="adv-struct-row">
+      <div class="adv-struct-name">⚙️ دور العمالة الحالى</div>
+      <div class="adv-dor-sel" id="advDorSel">
+        <button class="adv-dor-btn active" data-dor="أ"  onclick="advSetDor('أ')">الدور أ</button>
+        <button class="adv-dor-btn"        data-dor="ب"  onclick="advSetDor('ب')">الدور ب</button>
+        <button class="adv-dor-btn"        data-dor="جـ" onclick="advSetDor('جـ')">الدور جـ</button>
+      </div>
+    </div>
+
+    <!-- فم المنصورية -->
+    <div class="adv-flow-wrap">
+      <div class="adv-struct-name">🔀 فم ترعة المنصورية <span>مأخذ الجيزة ك٠</span></div>
+      <div class="adv-inputs">
+        <div class="adv-input-wrap">
+          <div class="adv-input-lbl">منسوب فم المنصورية (م)</div>
+          <div class="adv-input-row">
+            <input type="number" step="0.01" id="advFomLevel" placeholder="19.50" oninput="advCalcDiff('fom')">
+            <span class="adv-diff" id="advFomDiff"></span>
+          </div>
+        </div>
+        <div class="adv-input-wrap">
+          <div class="adv-input-lbl">تصرف المأخذ (م³/ث)</div>
+          <div class="adv-input-row">
+            <input type="number" step="0.01" id="advFomQ" placeholder="—">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- الحجوزات -->
+    <div id="advWeirsContainer"></div>
+
+    <!-- تنبيه الإدخال -->
+    <div class="adv-legend">
+      <div class="adv-leg-item"><div class="adv-leg-dot" style="background:var(--green)"></div>طبيعى (&lt;5سم)</div>
+      <div class="adv-leg-item"><div class="adv-leg-dot" style="background:var(--amber)"></div>مرتفع عن الطبيعى</div>
+      <div class="adv-leg-item"><div class="adv-leg-dot" style="background:var(--red)"></div>منخفض عن الطبيعى</div>
+    </div>
+
+    <!-- زر التحليل -->
+    <button class="adv-btn" id="advAnalyzeBtn" onclick="advAnalyze()">🔬 تحليل المناسيب وإصدار التوصيات</button>
+
+    <!-- النتيجة -->
+    <div id="advResultArea" style="display:none"></div>
+
+  </div>
+</div>
+
+  </div><!-- side-panel-body -->
+</div><!-- side-panel -->
+</div><!-- content -->
+</div><!-- app -->
+
+<!-- Node Modal -->
+<div id="nodeModal" onclick="if(event.target===this)closeModal()">
+  <div class="nm-panel" id="nmPanel">
+    <div class="nm-handle"></div>
+    <button class="nm-close" onclick="closeModal()">✕</button>
+    <div id="nmContent"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════
+   ROTATION SCHEDULE — 2026 (55 دور)
+   اليوم 6 أبريل 2026 = اليوم 4 من دور أ
+   دورة: أ(5) → ب(5) → جـ(5) تتكرر حتى 31/12/2026
+═══════════════════════════════════════ */
+const ROTATION_SCHEDULE = [
+  {dor:'أ',start:'2026-04-03',end:'2026-04-07',days:5},
+  {dor:'ب',start:'2026-04-08',end:'2026-04-12',days:5},
+  {dor:'جـ',start:'2026-04-13',end:'2026-04-17',days:5},
+  {dor:'أ',start:'2026-04-18',end:'2026-04-22',days:5},
+  {dor:'ب',start:'2026-04-23',end:'2026-04-27',days:5},
+  {dor:'جـ',start:'2026-04-28',end:'2026-05-02',days:5},
+  {dor:'أ',start:'2026-05-03',end:'2026-05-07',days:5},
+  {dor:'ب',start:'2026-05-08',end:'2026-05-12',days:5},
+  {dor:'جـ',start:'2026-05-13',end:'2026-05-17',days:5},
+  {dor:'أ',start:'2026-05-18',end:'2026-05-22',days:5},
+  {dor:'ب',start:'2026-05-23',end:'2026-05-27',days:5},
+  {dor:'جـ',start:'2026-05-28',end:'2026-06-01',days:5},
+  {dor:'أ',start:'2026-06-02',end:'2026-06-06',days:5},
+  {dor:'ب',start:'2026-06-07',end:'2026-06-11',days:5},
+  {dor:'جـ',start:'2026-06-12',end:'2026-06-16',days:5},
+  {dor:'أ',start:'2026-06-17',end:'2026-06-21',days:5},
+  {dor:'ب',start:'2026-06-22',end:'2026-06-26',days:5},
+  {dor:'جـ',start:'2026-06-27',end:'2026-07-01',days:5},
+  {dor:'أ',start:'2026-07-02',end:'2026-07-06',days:5},
+  {dor:'ب',start:'2026-07-07',end:'2026-07-11',days:5},
+  {dor:'جـ',start:'2026-07-12',end:'2026-07-16',days:5},
+  {dor:'أ',start:'2026-07-17',end:'2026-07-21',days:5},
+  {dor:'ب',start:'2026-07-22',end:'2026-07-26',days:5},
+  {dor:'جـ',start:'2026-07-27',end:'2026-07-31',days:5},
+  {dor:'أ',start:'2026-08-01',end:'2026-08-05',days:5},
+  {dor:'ب',start:'2026-08-06',end:'2026-08-10',days:5},
+  {dor:'جـ',start:'2026-08-11',end:'2026-08-15',days:5},
+  {dor:'أ',start:'2026-08-16',end:'2026-08-20',days:5},
+  {dor:'ب',start:'2026-08-21',end:'2026-08-25',days:5},
+  {dor:'جـ',start:'2026-08-26',end:'2026-08-30',days:5},
+  {dor:'أ',start:'2026-08-31',end:'2026-09-04',days:5},
+  {dor:'ب',start:'2026-09-05',end:'2026-09-09',days:5},
+  {dor:'جـ',start:'2026-09-10',end:'2026-09-14',days:5},
+  {dor:'أ',start:'2026-09-15',end:'2026-09-19',days:5},
+  {dor:'ب',start:'2026-09-20',end:'2026-09-24',days:5},
+  {dor:'جـ',start:'2026-09-25',end:'2026-09-29',days:5},
+  {dor:'أ',start:'2026-09-30',end:'2026-10-04',days:5},
+  {dor:'ب',start:'2026-10-05',end:'2026-10-09',days:5},
+  {dor:'جـ',start:'2026-10-10',end:'2026-10-14',days:5},
+  {dor:'أ',start:'2026-10-15',end:'2026-10-19',days:5},
+  {dor:'ب',start:'2026-10-20',end:'2026-10-24',days:5},
+  {dor:'جـ',start:'2026-10-25',end:'2026-10-29',days:5},
+  {dor:'أ',start:'2026-10-30',end:'2026-11-03',days:5},
+  {dor:'ب',start:'2026-11-04',end:'2026-11-08',days:5},
+  {dor:'جـ',start:'2026-11-09',end:'2026-11-13',days:5},
+  {dor:'أ',start:'2026-11-14',end:'2026-11-18',days:5},
+  {dor:'ب',start:'2026-11-19',end:'2026-11-23',days:5},
+  {dor:'جـ',start:'2026-11-24',end:'2026-11-28',days:5},
+  {dor:'أ',start:'2026-11-29',end:'2026-12-03',days:5},
+  {dor:'ب',start:'2026-12-04',end:'2026-12-08',days:5},
+  {dor:'جـ',start:'2026-12-09',end:'2026-12-13',days:5},
+  {dor:'أ',start:'2026-12-14',end:'2026-12-18',days:5},
+  {dor:'ب',start:'2026-12-19',end:'2026-12-23',days:5},
+  {dor:'جـ',start:'2026-12-24',end:'2026-12-28',days:5},
+  {dor:'أ',start:'2026-12-29',end:'2026-12-31',days:3},
+];
+
+/* ── الدور الحالي والتالي (حسب التاريخ الفعلي) ── */
+function getTodayStr(){
+  // اليوم الفعلي = 6 أبريل 2026
+  return '2026-04-06';
+}
+function getCurrentRotation(){
+  const today = getTodayStr();
+  const idx = ROTATION_SCHEDULE.findIndex(r => r.start <= today && r.end >= today);
+  if(idx<0) return {dor:'أ', start:'2026-04-03', end:'2026-04-07', days:5, dayNum:4, idx:0};
+  const r = ROTATION_SCHEDULE[idx];
+  const startD = new Date(r.start);
+  const todayD = new Date(today);
+  const dayNum = Math.floor((todayD-startD)/(86400000))+1;
+  return {...r, dayNum, idx};
+}
+function getNextRotation(){
+  const cur = getCurrentRotation();
+  return ROTATION_SCHEDULE[cur.idx+1]||null;
+}
+function getRotationByDate(dateStr){
+  return ROTATION_SCHEDULE.find(r=>r.start<=dateStr&&r.end>=dateStr)||null;
+}
+
+/* ── اسم الدور بالكامل ── */
+const DOR_FULL = {'أ':'دور أ — ك٢٨.٥٤→٣٧','ب':'دور ب — ك٠→١٦.٢٧','جـ':'دور جـ — ك١٦.٢٧→٢٨.٥٤'};
+const DOR_COLOR = {'أ':'#c9a84c','ب':'#4fa8c5','جـ':'#4db87a'};
+const DOR_LABEL = {'أ':'#c9a84c','ب':'#00e5ff','جـ':'#00e676'};
+
+/* ── الترع النشطة حسب الدور ── */
+function getActiveCanalsByDor(dor){
+  return CANALS.filter(c=>c.rotation===dor||c.type==='main');
+}
+
+/* ── Q فعلي حسب الدور النشط (الترع الأخرى مقفولة) ── */
+function getActiveQ(){
+  const cur = getCurrentRotation();
+  return CANALS.filter(c=>c.rotation===cur.dor).reduce((s,c)=>s+c.Q,0);
+}
+
+/* ═══════════════════════════════════════
+   DATA — مستخرج من أرانيك ترعة المنصورية
+═══════════════════════════════════════ */
+const CANALS = [
+  // ترعة المنصورية الرئيسية — مغذاها ترعة الجيزة عند ك 101.6
+  {id:'mansouriya',      name:'ترعة المنصورية',        type:'main',        km:0,     len:37,    feddan:24745, feeder:'الجيزة',        km_feeder:101.6, bank:'الأيسر', bed:17,    max_wsl:19.5, min_wsl:19,   rotation:'ب',  note:'الترعة الرئيسية — مغذاها ترعة الجيزة ك 101.6'},
+  // ═══ دور ب — ك٠ → ك١٦.٢٧ (قبل حجز المنشية) ═══
+  {id:'nuzla_sissy',     name:'ترعة نزلة السيسى',      type:'branch',      km:12.46, len:1.96,  feddan:460,   feeder:'المنصورية',     km_feeder:12.46, bank:'الأيمن', bed:17.2,  max_wsl:18.2, min_wsl:17.7, rotation:'ب',  note:'نهاية مغلقة'},
+  {id:'kafra_nasar',     name:'ترعة كفرة نصار',        type:'branch',      km:14.51, len:1.465, feddan:655,   feeder:'المنصورية',     km_feeder:14.51, bank:'الأيمن', bed:17,    max_wsl:18,   min_wsl:17.7, rotation:'ب',  note:'مصب نهاية'},
+  {id:'fara_kafra',      name:'فرع كفرة نصار',         type:'sub_branch',  km:1.34,  len:1.45,  feddan:290,   feeder:'كفرة نصار',     km_feeder:1.34,  bank:'الأيسر', bed:16.7,  max_wsl:17.75,min_wsl:17.35,rotation:'ب',  note:'مصب نهاية'},
+  // ═══ دور جـ — ك١٦.٢٧ → ك٢٨.٥٤ (بين حجز المنشية وحجز الحواجر) ═══
+  {id:'kardasa',         name:'ترعة كرداسة',           type:'branch',      km:16.27, len:4.76,  feddan:785,   feeder:'المنصورية',     km_feeder:16.27, bank:'الأيمن', bed:16.85, max_wsl:18,   min_wsl:17.8, rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara1_kardasa',   name:'فرع 1 كرداسة',          type:'sub_branch',  km:3.47,  len:1.6,   feddan:190,   feeder:'كرداسة',        km_feeder:3.47,  bank:'الأيمن', bed:16.4,  max_wsl:17.35,min_wsl:17.1, rotation:'جـ', note:'مصب نهاية'},
+  {id:'dalil_niazy',     name:'ترعة دليل نيازى',       type:'branch',      km:16.27, len:0.795, feddan:1206,  feeder:'المنصورية',     km_feeder:16.27, bank:'الأيسر', bed:16.88, max_wsl:17.98,min_wsl:17.8, rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara_niazy',      name:'فرع نيازى',             type:'sub_branch',  km:0.79,  len:3.4,   feddan:708,   feeder:'دليل نيازى',    km_feeder:0.79,  bank:'الأيسر', bed:16.86, max_wsl:17.9, min_wsl:17.85,rotation:'جـ', note:'مصب نهاية'},
+  {id:'janabiya_yusra',  name:'جنابية كرداسة اليسرى',  type:'sub_branch',  km:0.795, len:1.6,   feddan:133,   feeder:'دليل نيازى',    km_feeder:0.795, bank:'الأيسر', bed:16.95, max_wsl:17.95,min_wsl:17.45,rotation:'جـ', note:'مصب نهاية'},
+  {id:'janabiya_yumna',  name:'جنابية كرداسة اليمنى',  type:'sub_branch',  km:0.795, len:3.45,  feddan:365,   feeder:'دليل نيازى',    km_feeder:0.795, bank:'الأيمن', bed:16.93, max_wsl:17.95,min_wsl:17.45,rotation:'جـ', note:'مصب نهاية'},
+  {id:'sidi_sliman',     name:'فرع سيدى سليمان',       type:'branch',      km:17.84, len:1.915, feddan:425,   feeder:'المنصورية',     km_feeder:17.84, bank:'الأيمن', bed:16.9,  max_wsl:17.6, min_wsl:17.4, rotation:'جـ', note:'مصب نهاية'},
+  {id:'bani_majdul',     name:'ترعة بنى مجدول',        type:'branch',      km:21.47, len:2.9,   feddan:1160,  feeder:'المنصورية',     km_feeder:21.47, bank:'الأيمن', bed:16.25, max_wsl:17.45,min_wsl:17.1, rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara_bani',       name:'فرع بنى مجدول',         type:'sub_branch',  km:1.85,  len:0.9,   feddan:214,   feeder:'بنى مجدول',     km_feeder:1.85,  bank:'الأيسر', bed:15.85, max_wsl:16.8, min_wsl:16.4, rotation:'جـ', note:'مصب نهاية'},
+  {id:'nahya',           name:'ترعة ناهيا',            type:'branch',      km:22.86, len:5.3,   feddan:1670,  feeder:'المنصورية',     km_feeder:22.86, bank:'الأيمن', bed:15.85, max_wsl:17,   min_wsl:16.7, rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara_sabil',      name:'فرع السبيل',            type:'sub_branch',  km:1.36,  len:1.92,  feddan:333,   feeder:'ناهيا',         km_feeder:1.36,  bank:'الأيسر', bed:16.05, max_wsl:16.85,min_wsl:16.55,rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara1_nahya',     name:'فرع 1 ناهيا',           type:'sub_branch',  km:2.38,  len:0.535, feddan:124,   feeder:'ناهيا',         km_feeder:2.38,  bank:'الأيمن', bed:15.8,  max_wsl:16.75,min_wsl:16.5, rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara2_nahya',     name:'فرع 2 ناهيا',           type:'sub_branch',  km:3.78,  len:0.8,   feddan:114,   feeder:'ناهيا',         km_feeder:3.78,  bank:'الأيمن', bed:15.7,  max_wsl:16.65,min_wsl:16.45,rotation:'جـ', note:'مصب نهاية'},
+  {id:'barnsisa',        name:'ترعة البرنسيسة',        type:'branch',      km:22.86, len:1.68,  feddan:765,   feeder:'المنصورية',     km_feeder:22.86, bank:'الأيسر', bed:16.55, max_wsl:17.35,min_wsl:17.05,rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara_samar',      name:'فرع السمار',            type:'branch',      km:23.73, len:1.19,  feddan:159,   feeder:'المنصورية',     km_feeder:23.73, bank:'الأيمن', bed:16.4,  max_wsl:17,   min_wsl:16.85,rotation:'جـ', note:'نهاية مغلقة'},
+  {id:'fara_helmy',      name:'فرع حلمى',              type:'branch',      km:23.93, len:3.27,  feddan:970,   feeder:'المنصورية',     km_feeder:23.93, bank:'الأيسر', bed:16.6,  max_wsl:17.35,min_wsl:16.85,rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara_abdrahman',  name:'فرع عبد الرحمن',        type:'branch',      km:24.89, len:2.14,  feddan:370,   feeder:'المنصورية',     km_feeder:24.89, bank:'الأيسر', bed:16.2,  max_wsl:17.3, min_wsl:16.7, rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara_taleb',      name:'فرع طالب',              type:'branch',      km:24.89, len:1.84,  feddan:600,   feeder:'المنصورية',     km_feeder:24.89, bank:'الأيمن', bed:16.3,  max_wsl:17.3, min_wsl:16.65,rotation:'جـ', note:'مصب نهاية'},
+  {id:'hamamy',          name:'ترعة الحمامى',          type:'branch',      km:25.85, len:1.66,  feddan:855,   feeder:'المنصورية',     km_feeder:25.85, bank:'الأيمن', bed:16.45, max_wsl:17.2, min_wsl:16.75,rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara_shimy',      name:'فرع الشيمى',            type:'sub_branch',  km:0.75,  len:1.97,  feddan:400,   feeder:'ترعة الحمامى',  km_feeder:0.75,  bank:'الأيسر', bed:16.55, max_wsl:17.05,min_wsl:16.7, rotation:'جـ', note:'مصب نهاية'},
+  {id:'fara_barakat',    name:'فرع بركات',             type:'branch',      km:27.58, len:2.63,  feddan:1090,  feeder:'المنصورية',     km_feeder:27.58, bank:'الأيسر', bed:16.07, max_wsl:17.05,min_wsl:16.5, rotation:'جـ', note:'مصب نهاية'},
+  // ═══ دور أ — ك٢٨.٥٤ → ك٣٧ (بعد حجز الحواجر) ═══
+  {id:'kafr_hakim',      name:'ترعة كفر حكيم',         type:'branch',      km:28.53, len:2.3,   feddan:2160,  feeder:'المنصورية',     km_feeder:28.53, bank:'الأيمن', bed:16.1,  max_wsl:16.95,min_wsl:16.4, rotation:'أ',  note:'مصب نهاية'},
+  {id:'fara_sadeq',      name:'فرع صادق',              type:'sub_branch',  km:1.77,  len:2.32,  feddan:729,   feeder:'كفر حكيم',      km_feeder:1.77,  bank:'الأيسر', bed:16.1,  max_wsl:16.65,min_wsl:16.3, rotation:'أ',  note:'مصب نهاية'},
+  {id:'fara_sharif',     name:'فرع شريف',              type:'sub_branch',  km:2.03,  len:3.63,  feddan:698,   feeder:'كفر حكيم',      km_feeder:2.03,  bank:'الأيمن', bed:16.05, max_wsl:16.55,min_wsl:16.3, rotation:'أ',  note:'مصب نهاية'},
+  {id:'fara_fahmy',      name:'فرع فهمى',              type:'branch',      km:28.53, len:3.346, feddan:1210,  feeder:'المنصورية',     km_feeder:28.53, bank:'الأيسر', bed:15.4,  max_wsl:16.95,min_wsl:16.4, rotation:'أ',  note:'مصب نهاية'},
+  {id:'hawajir',         name:'ترعة الحواجر',          type:'branch',      km:28.54, len:6.02,  feddan:2960,  feeder:'المنصورية',     km_feeder:28.54, bank:'الأيمن', bed:16.03, max_wsl:16.95,min_wsl:16.4, rotation:'أ',  note:'مصب نهاية'},
+  {id:'fara_mansouriya', name:'فرع المنصورية',         type:'sub_branch',  km:1.05,  len:3.42,  feddan:870,   feeder:'الحواجر',       km_feeder:1.05,  bank:'الأيمن', bed:15.85, max_wsl:16.7, min_wsl:16.3, rotation:'أ',  note:'مصب نهاية'},
+  {id:'fara_abd_wahab',  name:'فرع عبد الوهاب',        type:'sub_branch',  km:2.08,  len:1.13,  feddan:870,   feeder:'فرع المنصورية', km_feeder:2.08,  bank:'الأيمن', bed:15.4,  max_wsl:15.95,min_wsl:15.6, rotation:'أ',  note:'مصب نهاية'},
+  {id:'fara_amir',       name:'فرع الأمير',            type:'sub_branch',  km:2.95,  len:1.8,   feddan:475,   feeder:'الحواجر',       km_feeder:2.95,  bank:'الأيسر', bed:15.65, max_wsl:16.4, min_wsl:16,   rotation:'أ',  note:'مصب نهاية'},
+  {id:'fara_sharka',     name:'فرع الشركة',            type:'sub_branch',  km:4.94,  len:1.25,  feddan:429,   feeder:'الحواجر',       km_feeder:4.94,  bank:'الأيمن', bed:15.85, max_wsl:16.3, min_wsl:16.15,rotation:'أ',  note:'مصب نهاية'},
+  {id:'fara_sawy',       name:'فرع الصاوى',            type:'branch',      km:33.21, len:2.29,  feddan:880,   feeder:'المنصورية',     km_feeder:33.21, bank:'الأيمن', bed:15.25, max_wsl:16.65,min_wsl:15.6, rotation:'أ',  note:'مصب نهاية'},
+  {id:'fara_ghanim',     name:'فرع غانم',              type:'branch',      km:34.72, len:1.35,  feddan:402,   feeder:'المنصورية',     km_feeder:34.72, bank:'الأيسر', bed:15.4,  max_wsl:16.5, min_wsl:15.7, rotation:'أ',  note:'مصب نهاية'},
+  {id:'ridwan',          name:'ترعة رضوان',            type:'branch',      km:35.06, len:2.66,  feddan:1480,  feeder:'المنصورية',     km_feeder:35.06, bank:'الأيمن', bed:15,    max_wsl:16.4, min_wsl:15.35,rotation:'أ',  note:'مصب نهاية'},
+  {id:'munshat_ridwan',  name:'ترعة منشأة رضوان',      type:'sub_branch',  km:0.98,  len:2.92,  feddan:680,   feeder:'رضوان',         km_feeder:0.98,  bank:'الأيسر', bed:15.2,  max_wsl:16.15,min_wsl:15.25,rotation:'أ',  note:'مصب نهاية'},
+  {id:'azmy',            name:'ترعة عزمى',             type:'branch',      km:36.75, len:1.86,  feddan:650,   feeder:'المنصورية',     km_feeder:36.75, bank:'الأيمن', bed:15,    max_wsl:16.4, min_wsl:15.6, rotation:'أ',  note:'مياه واردة من مغذى عزمى من الرياح الناصرى بالراجع'},
+  {id:'fara_barqash',    name:'فرع برقاش',             type:'sub_branch',  km:0.89,  len:1.57,  feddan:280,   feeder:'عزمى',          km_feeder:0.89,  bank:'الأيمن', bed:15,    max_wsl:16.2, min_wsl:15.7, rotation:'أ',  note:'مصب نهاية'},
+  {id:'zel_mansouriya',  name:'فرع ذيل المنصورية',     type:'branch',      km:36.99, len:1.25,  feddan:170,   feeder:'المنصورية',     km_feeder:36.99, bank:'الأيمن', bed:15.2,  max_wsl:16.35,min_wsl:15.5, rotation:'أ',  note:'نهاية مغلقة'},
+  {id:'imtidad',         name:'امتداد المنصورية',      type:'extension',   km:37,    len:4.3,   feddan:890,   feeder:'المنصورية',     km_feeder:37,    bank:'النهاية',bed:15.2,  max_wsl:16.35,min_wsl:15.5, rotation:'أ',  note:'نهاية مغلقة — مياه الرياح الناصرى'},
+];
+
+/* ═══ حجوزات فواصل الأدوار ═══ */
+const WEIRS = [
+  {id:'weir_munshia',  name:'حجز المنشية',  km:16.27, rotation_above:'ب', rotation_below:'جـ'},
+  {id:'weir_hawajir',  name:'حجز الحواجر', km:28.54, rotation_above:'جـ', rotation_below:'أ'},
+];
+
+/* حساب Q تقريبي من القنن المائي والزمام */
+const QANON = 55; // م³/فدان.يوم → تحويل لثا/ث
+CANALS.forEach(c => {
+  // Q (م³/ث) = زمام × قنن / 86400
+  c.Q = +(c.feddan * QANON / 86400).toFixed(3);
+  // تصنيف الحالة تبعاً للمنسوب
+  const depth = c.max_wsl - c.bed;
+  c.depth = +depth.toFixed(2);
+  // سرعة تقريبية (Manning مبسط)
+  const A = (c.type==='main') ? 10*depth : 1*depth;
+  c.V = depth > 0 ? +(c.Q / Math.max(A,0.01)).toFixed(3) : 0;
+  c.status = c.depth < 1.2 ? 'warn' : (c.Q > 2 ? 'ok' : 'ok');
+});
+
+// المأخذ الرئيسي — ترعة الجيزة ك 101.6
+const INTAKE = {id:'intake_giza', name:'مأخذ من ترعة الجيزة (ك 101.6)', type:'intake',
+  km:0, Q: +(CANALS.filter(c=>c.feeder==='المنصورية').reduce((s,c)=>s+c.Q,0)).toFixed(1),
+  WSL:19.5, depth:2.5, bed:17, V:1.2, status:'ok', rotation:'-',
+  note:'المأخذ الرئيسي لترعة المنصورية من ترعة الجيزة عند ك 101.6'};
+
+const ROT_COLORS = {'أ':'#c9a84c','ب':'#4fa8c5','جـ':'#4db87a','-':'#546e7a'};
+const TYPE_COLORS = {main:'#5a7abf',branch:'#4fa8c5',sub_branch:'#4db87a',extension:'#c47f3a',intake:'#4fa8c5'};
+
+function n2(v,d=1){return v!=null&&!isNaN(v)?Number(v).toFixed(d):'—'}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+
+/* STATE */
+let S = {
+  tab:'sankey',
+  skMode:'flow', skAnim:false, skFrame:0, skAnimId:null,
+  gate:62,
+  hMode:'bed',
+  nodes:[...CANALS],
+};
+
+/* ═══════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════ */
+function tickClock(){
+  const n=new Date();
+  document.getElementById('tbClock').textContent=
+    n.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tickClock,1000); tickClock();
+
+/* ═══════════════════════════════════════
+   TOPBAR UPDATE — rotation-aware
+═══════════════════════════════════════ */
+function updateTopbar(){
+  const totalQ = INTAKE.Q;
+  const activeQ = getActiveQ();
+  document.getElementById('tbQ').textContent = n2(totalQ,1);
+  document.getElementById('tbQActive').textContent = n2(activeQ,2);
+  const warns = S.nodes.filter(n=>n.status==='warn').length;
+  const el = document.getElementById('tbAlerts');
+  el.textContent = warns;
+  el.className = 'tb-mv' + (warns>0?' warn':' ok');
+
+  // Rotation status
+  const cur = getCurrentRotation();
+  const nxt = getNextRotation();
+  const dorEl = document.getElementById('tbDor');
+  dorEl.textContent = 'دور '+cur.dor;
+  dorEl.style.color = DOR_LABEL[cur.dor]||'var(--cyan)';
+  document.getElementById('tbDayNum').textContent = cur.dayNum;
+  document.getElementById('tbDayOf').textContent = '/'+cur.days;
+  // format end date arabic
+  const endD = new Date(cur.end+'T00:00:00');
+  document.getElementById('tbDorEnd').textContent = endD.toLocaleDateString('ar-EG',{day:'numeric',month:'short'});
+  if(nxt){
+    const nxtEl = document.getElementById('tbNextDor');
+    nxtEl.textContent = 'دور '+nxt.dor;
+    nxtEl.style.color = DOR_LABEL[nxt.dor]||'var(--tx2)';
+  }
+}
+
+/* ═══════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════ */
+const PANEL_TABS = ['nodes','rotation','heat','hydraulics','scenarios','command'];
+const PANEL_META = {
+  nodes:      {icon:'📋', label:'قائمة الترع'},
+  rotation:   {icon:'🔄', label:'أدوار المناوبة'},
+  heat:       {icon:'🌡️', label:'خريطة حرارية'},
+  hydraulics: {icon:'📐', label:'هيدروليك'},
+  scenarios:  {icon:'🎭', label:'السيناريوهات'},
+  command:    {icon:'⚡', label:'مركز التشغيل'},
+  advisor:    {icon:'🧠', label:'المستشار الذكى'},
+};
+
+function go(tab){
+  S.tab=tab;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  if(tab==='sankey'){closePanel();document.getElementById('tab-sankey').classList.add('active');setTimeout(skResize,60);return;}
+  const content=document.getElementById('content');
+  const body=document.getElementById('side-panel-body');
+  body.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const target=document.getElementById('tab-'+tab);
+  if(target) target.classList.add('active');
+  const meta=PANEL_META[tab]||{icon:'📋',label:tab};
+  document.getElementById('side-panel-icon').textContent=meta.icon;
+  document.getElementById('side-panel-label').textContent=meta.label;
+  document.getElementById('tab-sankey').classList.add('active');
+  content.classList.add('panel-open');
+  if(tab==='heat')       setTimeout(()=>{drawHeat();renderHeatTable();},120);
+  if(tab==='nodes')      renderNodeList(S.nodes);
+  if(tab==='rotation')   renderRotation();
+  if(tab==='command')    renderCmd();
+  if(tab==='hydraulics') setTimeout(initHydraulicsTab,120);
+  if(tab==='scenarios')  setTimeout(initScenarios,120);
+  setTimeout(skResize,120);
+}
+
+function closePanel(){
+  document.getElementById('content').classList.remove('panel-open');
+  document.getElementById('side-panel-body').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  S.tab='sankey';
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='sankey'));
+  setTimeout(skResize,120);
+}
+
+/* ═══════════════════════════════════════
+   MODAL
+═══════════════════════════════════════ */
+function openModal(c){
+  if(!c) return;
+  const rotColor = ROT_COLORS[c.rotation]||'#546e7a';
+  document.getElementById('nmContent').innerHTML=`
+    <div class="nm-title">${c.name}</div>
+    <div class="nm-sub">${c.feeder!=='-'?'مغذى: '+c.feeder+' (ك '+c.km_feeder+')':''} | ${c.bank||''} | دور: <span style="color:${rotColor};font-weight:800">${c.rotation}</span></div>
+    <div class="nm-grid">
+      <div class="nm-cell"><div class="ml">Q م³/ث</div><div class="mv" style="color:var(--cyan)">${n2(c.Q,3)}</div></div>
+      <div class="nm-cell"><div class="ml">الطول كم</div><div class="mv">${n2(c.len,3)}</div></div>
+      <div class="nm-cell"><div class="ml">الزمام فدان</div><div class="mv" style="color:var(--green)">${c.feddan?.toLocaleString()}</div></div>
+      <div class="nm-cell"><div class="ml">منسوب قاع</div><div class="mv">${n2(c.bed,2)}</div></div>
+      <div class="nm-cell"><div class="ml">أقصى منسوب</div><div class="mv">${n2(c.max_wsl,2)}</div></div>
+      <div class="nm-cell"><div class="ml">أدنى منسوب</div><div class="mv">${n2(c.min_wsl,2)}</div></div>
+    </div>
+    ${c.note?`<div class="nm-note">📌 ${c.note}</div>`:''}
+  `;
+  document.getElementById('nodeModal').classList.add('open');
+}
+function closeModal(){document.getElementById('nodeModal').classList.remove('open');}
+
+/* ═══════════════════════════════════════
+   NODE LIST
+═══════════════════════════════════════ */
+function renderNodeList(list){
+  document.getElementById('nodeList').innerHTML=list.map(c=>`
+    <div class="node-card ${c.status}" onclick="openModal(CANALS.find(x=>x.id==='${c.id}'))">
+      <div class="nc-top">
+        <span class="nc-name">${c.name}</span>
+        <span class="nc-badge ok" style="background:${ROT_COLORS[c.rotation]}22;color:${ROT_COLORS[c.rotation]};border-color:${ROT_COLORS[c.rotation]}44">دور ${c.rotation}</span>
+      </div>
+      <div class="nc-grid">
+        <div class="nc-cell"><div class="cl">Q م³/ث</div><div class="cv">${n2(c.Q,3)}</div></div>
+        <div class="nc-cell"><div class="cl">طول كم</div><div class="cv">${n2(c.len,3)}</div></div>
+        <div class="nc-cell"><div class="cl">زمام فدان</div><div class="cv">${c.feddan?.toLocaleString()}</div></div>
+      </div>
+    </div>`).join('');
+}
+function filterNodes(q){
+  const filtered = q ? CANALS.filter(c=>c.name.includes(q)||c.feeder.includes(q)) : CANALS;
+  renderNodeList(filtered);
+}
+
+/* ═══════════════════════════════════════
+   ROTATION TAB — LIVE DASHBOARD
+═══════════════════════════════════════ */
+function renderRotation(){
+  const cur = getCurrentRotation();
+  const nxt = getNextRotation();
+  const today = getTodayStr();
+
+  // ── Banner ──
+  const dorEl = document.getElementById('rotCurBig');
+  dorEl.textContent = DOR_FULL[cur.dor]||('دور '+cur.dor);
+  dorEl.style.color = DOR_LABEL[cur.dor]||'var(--cyan)';
+  document.getElementById('rotDayBig').textContent = cur.dayNum;
+  document.getElementById('rotDayOfBig').textContent = 'من '+cur.days;
+  const fmtDate = d => new Date(d+'T00:00:00').toLocaleDateString('ar-EG',{day:'numeric',month:'short'});
+  document.getElementById('rotEndBig').textContent = fmtDate(cur.end);
+  if(nxt){
+    const nxtEl=document.getElementById('rotNextBig');
+    nxtEl.textContent='دور '+nxt.dor+' ('+fmtDate(nxt.start)+')';
+    nxtEl.style.color=DOR_LABEL[nxt.dor]||'var(--tx2)';
+  }
+  const pct = (cur.dayNum/cur.days)*100;
+  const prog=document.getElementById('rotProgress');
+  prog.style.width=pct+'%';
+  prog.style.background=DOR_COLOR[cur.dor]||'var(--amber)';
+  document.getElementById('rotStartLbl').textContent=fmtDate(cur.start);
+  document.getElementById('rotEndLbl').textContent=fmtDate(cur.end);
+
+  // ── Upcoming 6 rotations (next ~30 days) ──
+  const upcoming = ROTATION_SCHEDULE.filter(r=>r.start>=today).slice(0,7);
+  document.getElementById('rotUpcoming').innerHTML = upcoming.map((r,i)=>{
+    const isFirst=i===0&&r.start===cur.start;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;background:${isFirst?'rgba(0,229,255,.07)':'rgba(0,0,0,.15)'};border:1px solid ${isFirst?'rgba(0,229,255,.2)':'var(--ln)'}">
+      <span style="font-size:.62rem;font-weight:900;color:${DOR_LABEL[r.dor]};min-width:36px">دور ${r.dor}</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--tx2)">${fmtDate(r.start)} ← → ${fmtDate(r.end)}</span>
+      <span style="margin-right:auto;font-size:.58rem;color:var(--tx3)">${r.days} أيام</span>
+      ${isFirst?'<span style="font-size:.52rem;color:var(--green);font-weight:700">● الآن</span>':''}
+    </div>`;
+  }).join('');
+
+  // ── Year Timeline Canvas ──
+  drawRotYearTimeline();
+
+  // ── Canal list grouped by rotation ──
+  const groups = {'أ':[],'ب':[],'جـ':[]};
+  CANALS.forEach(c=>{if(groups[c.rotation]) groups[c.rotation].push(c);});
+  const order = ['أ','ب','جـ'];
+  let html='';
+  order.forEach(dor=>{
+    const isActive = dor===cur.dor;
+    const cls = dor==='أ'?'dor-a':dor==='ب'?'dor-b':'dor-j';
+    const list = groups[dor]||[];
+    const totalFed = list.reduce((s,c)=>s+c.feddan,0);
+    const totalQ2 = list.reduce((s,c)=>s+c.Q,0);
+    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:.58rem;font-weight:700;color:${DOR_LABEL[dor]};text-transform:uppercase;letter-spacing:.5px;padding:6px 4px 2px">
+      <span style="width:8px;height:8px;border-radius:50%;background:${DOR_COLOR[dor]};display:inline-block;${isActive?'box-shadow:0 0 8px '+DOR_COLOR[dor]:''}"></span>
+      دور ${dor} — ${list.length} مجرى
+      <span style="font-weight:400;color:var(--tx3)">${totalFed.toLocaleString()} فدان | Q=${n2(totalQ2,2)} م³/ث</span>
+      ${isActive?'<span style="background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.3);padding:1px 7px;border-radius:999px;font-size:.5rem;font-weight:800">● نشط الآن — اليوم '+cur.dayNum+'/'+cur.days+'</span>':''}
+    </div>`;
+    list.forEach(c=>{
+      const dimmed = !isActive && c.type!=='main';
+      html+=`<div class="rot-card ${cls}" onclick="openModal(CANALS.find(x=>x.id==='${c.id}'))" style="${dimmed?'opacity:.45;filter:grayscale(.5)':''}">
+        <div class="rc-top">
+          <span class="rc-name">${c.name}</span>
+          <span class="rc-dor">دور ${c.rotation}</span>
+        </div>
+        <div class="rc-info">
+          <span>طول: <span>${n2(c.len,2)} كم</span></span>
+          <span>زمام: <span>${c.feddan?.toLocaleString()} فدان</span></span>
+          <span>Q: <span>${n2(c.Q,3)} م³/ث</span></span>
+        </div>
+      </div>`;
+    });
+  });
+  document.getElementById('rotGrid').innerHTML=html;
+  document.getElementById('rotCount').textContent=`إجمالي: ${CANALS.length} مجرى | ${ROTATION_SCHEDULE.length} دور حتى 31/12/2026`;
+}
+
+/* ── Year timeline bar ── */
+function drawRotYearTimeline(){
+  const canvas=document.getElementById('rotYearCanvas');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.offsetWidth||300, H=38;
+  canvas.width=W*window.devicePixelRatio; canvas.height=H*window.devicePixelRatio;
+  ctx.setTransform(window.devicePixelRatio,0,0,window.devicePixelRatio,0,0);
+  ctx.clearRect(0,0,W,H);
+
+  const yearStart=new Date('2026-04-03');
+  const yearEnd=new Date('2026-12-31');
+  const totalDays=(yearEnd-yearStart)/86400000+1;
+  const today=new Date(getTodayStr()+'T00:00:00');
+
+  const DOR_HEX={'أ':'#c9a84c','ب':'#4fa8c5','جـ':'#4db87a'};
+  ROTATION_SCHEDULE.forEach(r=>{
+    const s=new Date(r.start+'T00:00:00');
+    const e=new Date(r.end+'T00:00:00');
+    const x1=((s-yearStart)/86400000/totalDays)*W;
+    const x2=((e-yearStart+86400000)/86400000/totalDays)*W;
+    ctx.fillStyle=DOR_HEX[r.dor]||'#607d8b';
+    ctx.fillRect(x1,4,x2-x1-1,22);
+  });
+
+  // Today marker
+  const todayX=((today-yearStart)/86400000/totalDays)*W;
+  ctx.fillStyle='#fff';
+  ctx.fillRect(todayX-1,0,2,H);
+  ctx.font='7px IBM Plex Mono,monospace';
+  ctx.fillStyle='#fff';
+  ctx.textAlign='center';
+  ctx.fillText('اليوم',todayX,H-2);
+
+  // Month labels
+  ctx.fillStyle='rgba(180,210,230,.5)';ctx.font='6px Cairo,sans-serif';ctx.textAlign='center';
+  ['أبر','مايو','يون','يول','أغس','سبت','أكت','نوف','ديس'].forEach((m,i)=>{
+    const d=new Date(2026,3+i,1);
+    const x=((d-yearStart)/86400000/totalDays)*W;
+    ctx.fillText(m,x+8,16);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SYNOPTIC ENGINE v6 — ISM Ultra-Wide Style
+   ▸ خلفية شبكة هندسية فاتحة (grid بيضاء/رمادية) زي ISM
+   ▸ خط رئيسي عمودي سميك مزدوج في المنتصف
+   ▸ فروع أفقية يمين ويسار بـ labels مستطيلة ملونة
+   ▸ sub-branches بـ elbow رأسي/أفقي
+   ▸ نقاط تقاطع دائرية مضيئة على الخط الرئيسي
+   ▸ أسهم مثلثة على كل مسار
+   ▸ particles متحركة على كل المسارات
+   ▸ zoom / pan / tooltip / click-to-modal
+═══════════════════════════════════════════════════════════════ */
+const skCanvas = document.getElementById('skCanvas');
+const skCtx    = skCanvas.getContext('2d');
+const mmCanvas = document.getElementById('skMiniMap');
+const mmCtx    = mmCanvas.getContext('2d');
+
+let skW=0, skH=0;
+let vp={x:0,y:0,scale:1};
+let dragState={active:false,startX:0,startY:0,vpX:0,vpY:0};
+let skNodes=[], skEdges=[];
+let SKP=[], skTick=0;
+
+/* ── PALETTE (ISM Ultra-Wide style) ── */
+const ISO_MAIN   = '#3ab8d8';
+/* خلفية فاتحة زي ISM */
+const ISO_BG       = '#dce8f0';   // light blue-grey background
+const ISO_GRID_MAJ = 'rgba(140,175,200,.55)'; // major grid
+const ISO_GRID_MIN = 'rgba(140,175,200,.22)'; // minor grid
+
+/* دور colors */
+const ROT_ISO = {
+  'أ': '#c9882a',   // gold-amber
+  'ب': '#2196a8',   // teal
+  'جـ':'#2e8f54',   // green
+  '-': '#607d8b'
+};
+
+/* ── COLOR BY MODE ── */
+function nodeCol(c){
+  if(!c) return '#607d8b';
+  if(S.skMode==='status'){
+    if(c.depth<1.2) return '#d32f2f';
+    if(c.depth<1.5) return '#e65100';
+    return '#2e7d32';
+  }
+  if(S.skMode==='perc'){
+    const pct=c.Q/INTAKE.Q;
+    return `hsl(${200-pct*120},60%,38%)`;
+  }
+  return ROT_ISO[c.rotation]||'#607d8b';
+}
+function edgeCol(e){
+  if(S.skMode==='status'&&e.obj) return nodeCol(e.obj);
+  if(e.isSpine) return ISO_MAIN;
+  return e.col;
+}
+
+/* ── LAYOUT CONSTANTS ── */
+const SPINE_HW = 10;   // half-width of main canal (vertical)
+const LBL_H    = 16;
+const LBL_R    = 3;
+const SK_PAD_T = 48;   // top margin (intake)
+const SK_PAD_B = 36;   // bottom margin
+
+/* ── BUILD LAYOUT (VERTICAL spine, horizontal branches) ── */
+function buildSankey(){
+  if(skW<20||skH<20) return;
+  skNodes=[]; skEdges=[];
+
+  const totalQ  = INTAKE.Q;
+  const mainLen = 37; // km
+  const yT    = SK_PAD_T;
+  const yB    = skH - SK_PAD_B;
+  const ySpan = yB - yT;
+  const yKm   = km => yT + (km/mainLen)*ySpan;  // top = km0, bottom = km37
+  const xSpine= skW * 0.48;  // spine x — slightly left of center
+
+  /* ── MAIN SPINE (vertical) ── */
+  skEdges.push({
+    isSpine:true, isMain:true,
+    x0:xSpine, y0:yT - 18,
+    x1:xSpine, y1:yB + 16,
+    Q:totalQ, col:ISO_MAIN, obj:null
+  });
+
+  /* ── BRANCHES from main ── */
+  const mainBranches = CANALS
+    .filter(c=>c.feeder==='المنصورية')
+    .sort((a,b)=>a.km-b.km);
+
+  // group overlapping km positions
+  const kmGroups={};
+  mainBranches.forEach(c=>{
+    const k=Math.round(c.km*10);
+    if(!kmGroups[k]) kmGroups[k]=[];
+    kmGroups[k].push(c);
+  });
+
+  const nodeByName={};
+  const RIGHT_MAX = skW * 0.88;
+  const LEFT_MIN  = skW * 0.06;
+
+  mainBranches.forEach(c=>{
+    const isLeft = c.bank==='الأيمن';   // الأيمن على يسار الشاشة (على يمين اتجاه السريان من أعلى لأسفل)
+    const kg     = Math.round(c.km*10);
+    const grp    = kmGroups[kg];
+    const gi     = grp.indexOf(c);
+    const by     = yKm(c.km) + gi * 9;  // stagger overlapping
+    const col    = nodeCol(c);
+    const dir    = isLeft ? -1 : 1;     // -1 left, +1 right
+
+    // branch reach proportional to feddan
+    const BASE   = skW * 0.14;
+    const MAX_R  = skW * (isLeft ? 0.40 : 0.42);
+    const reach  = clamp(BASE + (c.feddan/2500)*MAX_R, BASE*0.6, MAX_R);
+    const tipX   = isLeft
+      ? clamp(xSpine - reach, LEFT_MIN, xSpine - 36)
+      : clamp(xSpine + reach, xSpine + 36, RIGHT_MAX);
+
+    const lw = Math.max(2.5, 2.2 + (c.Q/totalQ)*14);
+
+    skEdges.push({
+      isBranch:true, isLeft, dir,
+      x0:xSpine + dir*SPINE_HW, y0:by,
+      x1:tipX,                  y1:by,
+      Q:c.Q, col, obj:c, lw
+    });
+
+    const nd={
+      id:c.id, x:tipX, y:by,
+      label:c.name, Q:c.Q,
+      type:'branch', c:col, obj:c,
+      isLeft, dir, km:c.km
+    };
+    skNodes.push(nd);
+    nodeByName[c.name]=nd;
+  });
+
+  /* ── SUB-BRANCHES (elbow: vertical from parent, then horizontal) ── */
+  CANALS.filter(c=>c.feeder!=='المنصورية'&&c.feeder!=='الجيزة').forEach(c=>{
+    const parent = nodeByName[c.feeder]
+                || skNodes.find(n=>n.obj&&n.obj.name===c.feeder);
+    if(!parent) return;
+
+    const col    = nodeCol(c);
+    const isLeft = parent.isLeft;
+    const dir    = parent.dir;
+    const lw     = Math.max(1.8, 1.5+(c.Q/totalQ)*10);
+
+    // elbow: go vertically from parent tip, then horizontal further out
+    const elbY   = parent.y + 18 + Math.random()*4|0; // slight offset down
+    const elbX   = isLeft
+      ? clamp(parent.x - 28, LEFT_MIN, parent.x-12)
+      : clamp(parent.x + 28, parent.x+12, RIGHT_MAX);
+
+    skEdges.push({
+      isSub:true, isLeft, dir,
+      x0:parent.x, y0:parent.y,
+      ex:parent.x, ey:elbY,
+      x1:elbX,     y1:elbY,
+      Q:c.Q, col, obj:c, lw, parent
+    });
+
+    skNodes.push({
+      id:c.id, x:elbX, y:elbY,
+      label:c.name, Q:c.Q,
+      type:'sub_branch', c:col, obj:c,
+      isLeft, dir
+    });
+  });
+
+  /* ── INTAKE node (top of spine) ── */
+  skNodes.push({
+    id:'__intake', x:xSpine, y:yT-18,
+    label:'مأخذ الجيزة ك٠', Q:totalQ,
+    type:'intake', c:ISO_MAIN, obj:INTAKE,
+    isLeft:false, dir:0
+  });
+  /* ── END node ── */
+  skNodes.push({
+    id:'__end', x:xSpine, y:yB+16,
+    label:'نهاية ك٣٧', Q:0,
+    type:'end', c:'#37515f', obj:null,
+    isLeft:false, dir:0
+  });
+}
+
+/* ── DRAW FILLED TRIANGLE ARROW ── */
+function drawArrow(ctx, x, y, angle, sz, col, alpha){
+  ctx.save();
+  ctx.globalAlpha = alpha||1;
+  ctx.translate(x,y); ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(sz, 0);
+  ctx.lineTo(-sz*0.65,  sz*0.5);
+  ctx.lineTo(-sz*0.65, -sz*0.5);
+  ctx.closePath();
+  ctx.fillStyle=col; ctx.fill();
+  ctx.restore();
+}
+
+/* ── DRAW LABEL BOX (ISM style: solid colored bg, white text) ── */
+function drawLabel(ctx, x, y, text, col, toLeft){
+  const fs = 8.5;
+  ctx.font = `700 ${fs}px Cairo,sans-serif`;
+  const tw = ctx.measureText(text).width;
+  const bw = tw + 12, bh = LBL_H;
+  const bx = toLeft ? x - bw - 3 : x + 3;
+  const by = y - bh/2;
+
+  ctx.save();
+  // solid filled background
+  ctx.fillStyle   = col+'e8';
+  ctx.strokeStyle = col;
+  ctx.lineWidth   = 1;
+  ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,LBL_R);
+  ctx.fill(); ctx.stroke();
+  // white text
+  ctx.fillStyle    = '#ffffff';
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor  = 'rgba(0,0,0,.4)'; ctx.shadowBlur=2;
+  ctx.fillText(text, bx+6, by+bh/2);
+  ctx.restore();
+}
+
+/* ── MAIN DRAW ── */
+function drawSankey(){
+  if(skW<20||skH<20) return;
+  const dpr=window.devicePixelRatio||1;
+  skCtx.setTransform(dpr,0,0,dpr,0,0);
+  skCtx.clearRect(0,0,skW,skH);
+
+  /* ── BACKGROUND: light engineering paper ── */
+  skCtx.fillStyle=ISO_BG;
+  skCtx.fillRect(0,0,skW,skH);
+
+  // minor grid (small)
+  const gsm=16;
+  for(let x=0;x<skW;x+=gsm){
+    skCtx.beginPath();skCtx.moveTo(x,0);skCtx.lineTo(x,skH);
+    skCtx.strokeStyle=ISO_GRID_MIN;skCtx.lineWidth=.5;skCtx.stroke();
+  }
+  for(let y=0;y<skH;y+=gsm){
+    skCtx.beginPath();skCtx.moveTo(0,y);skCtx.lineTo(skW,y);
+    skCtx.strokeStyle=ISO_GRID_MIN;skCtx.lineWidth=.5;skCtx.stroke();
+  }
+  // major grid (every 80px)
+  const gsM=80;
+  for(let x=0;x<skW;x+=gsM){
+    skCtx.beginPath();skCtx.moveTo(x,0);skCtx.lineTo(x,skH);
+    skCtx.strokeStyle=ISO_GRID_MAJ;skCtx.lineWidth=.8;skCtx.stroke();
+  }
+  for(let y=0;y<skH;y+=gsM){
+    skCtx.beginPath();skCtx.moveTo(0,y);skCtx.lineTo(skW,y);
+    skCtx.strokeStyle=ISO_GRID_MAJ;skCtx.lineWidth=.8;skCtx.stroke();
+  }
+
+  skCtx.save();
+  skCtx.translate(vp.x,vp.y);
+  skCtx.scale(vp.scale,vp.scale);
+
+  const yT=SK_PAD_T, yB=skH-SK_PAD_B, ySpan=yB-yT;
+  const xSpine=skW*0.48;
+
+  /* ── KM ruler (left of spine) ── */
+  skCtx.save();
+  const kmStep = skH<400?10:5;
+  for(let k=0;k<=37;k+=kmStep){
+    const ry=yT+(k/37)*ySpan;
+    skCtx.beginPath();skCtx.moveTo(xSpine-SPINE_HW-1,ry);skCtx.lineTo(xSpine+SPINE_HW+1,ry);
+    skCtx.strokeStyle='rgba(0,0,0,.12)';skCtx.lineWidth=.8;skCtx.stroke();
+    skCtx.fillStyle='rgba(30,80,120,.6)';
+    skCtx.font='bold 8px IBM Plex Mono,monospace';
+    skCtx.textAlign='right';skCtx.textBaseline='middle';
+    skCtx.fillText('ك'+k, xSpine-SPINE_HW-4, ry);
+  }
+  skCtx.restore();
+
+  /* ── MAIN SPINE (vertical double-band) ── */
+  {
+    const sp=skEdges.find(e=>e.isSpine);
+    const x=xSpine, y0=sp.y0, y1=sp.y1;
+
+    // outer glow/shadow
+    skCtx.save();
+    skCtx.shadowColor='rgba(30,120,180,.35)'; skCtx.shadowBlur=18;
+    skCtx.beginPath();skCtx.moveTo(x,y0);skCtx.lineTo(x,y1);
+    skCtx.strokeStyle='rgba(58,184,216,.18)';skCtx.lineWidth=SPINE_HW*2+16;
+    skCtx.lineCap='square';skCtx.stroke();
+    skCtx.restore();
+
+    // core — dark blue band
+    skCtx.save();
+    skCtx.beginPath();skCtx.moveTo(x,y0);skCtx.lineTo(x,y1);
+    skCtx.strokeStyle='rgba(15,55,95,.92)';skCtx.lineWidth=SPINE_HW*2+2;
+    skCtx.lineCap='square';skCtx.stroke();
+    skCtx.restore();
+
+    // left rail
+    skCtx.save();
+    const gL=skCtx.createLinearGradient(x,y0,x,y1);
+    gL.addColorStop(0,ISO_MAIN+'55');gL.addColorStop(.1,ISO_MAIN+'ee');
+    gL.addColorStop(.9,ISO_MAIN+'ee');gL.addColorStop(1,ISO_MAIN+'55');
+    skCtx.beginPath();skCtx.moveTo(x-SPINE_HW,y0);skCtx.lineTo(x-SPINE_HW,y1);
+    skCtx.strokeStyle=gL;skCtx.lineWidth=3;skCtx.stroke();
+    // right rail
+    const gR=skCtx.createLinearGradient(x,y0,x,y1);
+    gR.addColorStop(0,ISO_MAIN+'44');gR.addColorStop(.1,ISO_MAIN+'cc');
+    gR.addColorStop(.9,ISO_MAIN+'cc');gR.addColorStop(1,ISO_MAIN+'44');
+    skCtx.beginPath();skCtx.moveTo(x+SPINE_HW,y0);skCtx.lineTo(x+SPINE_HW,y1);
+    skCtx.strokeStyle=gR;skCtx.lineWidth=2;skCtx.stroke();
+    skCtx.restore();
+
+    // flow arrows on spine (pointing down = flow direction km0→km37)
+    [0.15,0.3,0.45,0.6,0.75,0.9].forEach(t=>{
+      const ay=y0+(y1-y0)*t;
+      drawArrow(skCtx, x, ay, Math.PI/2, 6, ISO_MAIN+'cc', 1);
+    });
+  }
+
+  /* ── WEIRS (حجوزات فواصل الأدوار) ── */
+  WEIRS.forEach(w=>{
+    const wy = yT + (w.km/37)*ySpan;
+    const wx  = xSpine;
+    const wHW = 22;   // half-width of weir symbol
+    const wH  = 10;   // height of weir box
+
+    // شادو خلف الحجز
+    skCtx.save();
+    skCtx.shadowColor='rgba(0,0,0,.25)'; skCtx.shadowBlur=10;
+
+    // مستطيل الحجز — أسود/بنى داكن عريض على الخط
+    skCtx.beginPath();
+    skCtx.roundRect(wx - wHW, wy - wH/2, wHW*2, wH, 3);
+    skCtx.fillStyle   = '#2c1a0a';
+    skCtx.fill();
+
+    // خطوط التهشير (هاشور) للدلالة على الحجز
+    skCtx.strokeStyle = '#6b3d0a';
+    skCtx.lineWidth   = 1.2;
+    for(let hx = wx-wHW+4; hx < wx+wHW-2; hx+=5){
+      skCtx.beginPath();
+      skCtx.moveTo(hx, wy-wH/2);
+      skCtx.lineTo(hx-4, wy+wH/2);
+      skCtx.stroke();
+    }
+
+    // حافتان (rails) يمين ويسار
+    skCtx.strokeStyle = '#e67e22';
+    skCtx.lineWidth   = 2.5;
+    skCtx.beginPath();
+    skCtx.moveTo(wx - wHW, wy - wH/2 - 1);
+    skCtx.lineTo(wx - wHW, wy + wH/2 + 1);
+    skCtx.stroke();
+    skCtx.beginPath();
+    skCtx.moveTo(wx + wHW, wy - wH/2 - 1);
+    skCtx.lineTo(wx + wHW, wy + wH/2 + 1);
+    skCtx.stroke();
+
+    skCtx.restore();
+
+    // ─── label الحجز (يسار) ───
+    const colAbove = ROT_ISO[w.rotation_above]||'#607d8b';
+    const colBelow = ROT_ISO[w.rotation_below]||'#607d8b';
+
+    // اسم الحجز
+    skCtx.save();
+    const ltext  = w.name + '  ك' + w.km;
+    const lfs    = 8;
+    skCtx.font   = `800 ${lfs}px Cairo,sans-serif`;
+    const ltw    = skCtx.measureText(ltext).width;
+    const lbw    = ltw+14, lbh=15;
+    const lbx    = wx - wHW - lbw - 6;
+    const lby    = wy - lbh/2;
+    // box
+    skCtx.fillStyle   = '#2c1a0a';
+    skCtx.strokeStyle = '#e67e22';
+    skCtx.lineWidth   = 1;
+    skCtx.beginPath(); skCtx.roundRect(lbx,lby,lbw,lbh,3);
+    skCtx.fill(); skCtx.stroke();
+    // text
+    skCtx.fillStyle    = '#f5deb3';
+    skCtx.textAlign    = 'left';
+    skCtx.textBaseline = 'middle';
+    skCtx.fillText(ltext, lbx+7, wy);
+    skCtx.restore();
+
+    // علامة الدور فوق وتحت الحجز (يمين)
+    const rxBase = wx + wHW + 8;
+    [{label:'دور '+w.rotation_above, col:colAbove, dy:-13},
+     {label:'دور '+w.rotation_below, col:colBelow, dy: 13}].forEach(({label,col,dy})=>{
+      skCtx.save();
+      skCtx.font='700 7.5px Cairo,sans-serif';
+      const tw2=skCtx.measureText(label).width;
+      skCtx.fillStyle=col+'22'; skCtx.strokeStyle=col; skCtx.lineWidth=.8;
+      skCtx.beginPath(); skCtx.roundRect(rxBase,wy+dy-7,tw2+10,13,3);
+      skCtx.fill(); skCtx.stroke();
+      skCtx.fillStyle=col;
+      skCtx.textAlign='left'; skCtx.textBaseline='middle';
+      skCtx.fillText(label, rxBase+5, wy+dy);
+      skCtx.restore();
+    });
+
+    // خط أفقي فاصل خفيف يمتد عبر الكانفاس
+    skCtx.save();
+    skCtx.setLineDash([6,5]);
+    skCtx.beginPath();
+    skCtx.moveTo(0, wy); skCtx.lineTo(skW, wy);
+    skCtx.strokeStyle='rgba(230,126,34,.22)'; skCtx.lineWidth=1;
+    skCtx.stroke();
+    skCtx.setLineDash([]);
+    skCtx.restore();
+  });
+
+  /* ── BRANCH STEMS (horizontal) — rotation-aware ── */
+  const _curDor = getCurrentRotation().dor;
+  skEdges.filter(e=>e.isBranch).forEach(e=>{
+    const col=edgeCol(e);
+    const xJ=xSpine+e.dir*SPINE_HW; // junction point on spine rail
+    const isActiveDor = e.obj && e.obj.rotation===_curDor;
+    const alpha = isActiveDor ? 1 : 0.28;
+
+    // stem line
+    skCtx.save();
+    skCtx.globalAlpha=alpha;
+    skCtx.beginPath();skCtx.moveTo(xJ,e.y0);skCtx.lineTo(e.x1,e.y1);
+    skCtx.strokeStyle=col+'e0';skCtx.lineWidth=isActiveDor?e.lw+1:e.lw;skCtx.lineCap='round';
+    if(isActiveDor){skCtx.shadowColor=col+'88';skCtx.shadowBlur=e.lw*2.2;}
+    skCtx.stroke();
+    skCtx.restore();
+
+    // junction dot on spine
+    skCtx.save();
+    skCtx.globalAlpha=alpha;
+    skCtx.beginPath();skCtx.arc(xSpine, e.y0, SPINE_HW*0.55, 0, Math.PI*2);
+    skCtx.fillStyle='rgba(15,50,85,.9)';
+    skCtx.strokeStyle=col;skCtx.lineWidth=2;
+    if(isActiveDor){skCtx.shadowColor=col+'aa';skCtx.shadowBlur=10;}
+    skCtx.fill();skCtx.stroke();
+    skCtx.restore();
+
+    // arrow at midpoint
+    const mx=(xJ+e.x1)/2;
+    const ang=e.isLeft?Math.PI:0;
+    skCtx.save();skCtx.globalAlpha=alpha;
+    drawArrow(skCtx, mx, e.y0, ang, 5, col+'cc', 1);
+    skCtx.restore();
+  });
+
+  /* ── SUB-BRANCH ELBOWS ── */
+  skEdges.filter(e=>e.isSub).forEach(e=>{
+    const col=edgeCol(e);
+    const isActiveDorS = e.obj && e.obj.rotation===_curDor;
+    const alphaS = isActiveDorS ? 1 : 0.22;
+    skCtx.save();
+    skCtx.globalAlpha=alphaS;
+    skCtx.beginPath();
+    skCtx.moveTo(e.x0,e.y0);
+    skCtx.lineTo(e.ex,e.ey);
+    skCtx.lineTo(e.x1,e.y1);
+    skCtx.strokeStyle=col+'bb';skCtx.lineWidth=e.lw;
+    skCtx.lineCap='round';skCtx.lineJoin='round';
+    if(isActiveDorS){skCtx.shadowColor=col+'66';skCtx.shadowBlur=e.lw;}
+    skCtx.stroke();
+    skCtx.restore();
+    skCtx.save();skCtx.globalAlpha=alphaS;
+    skCtx.beginPath();skCtx.arc(e.x0,e.y0,3,0,Math.PI*2);
+    skCtx.fillStyle=col+'cc';skCtx.fill();
+    skCtx.restore();
+    const tipAng=e.x1<=e.x0?Math.PI:0;
+    skCtx.save();skCtx.globalAlpha=alphaS;
+    drawArrow(skCtx, e.x1,e.y1, tipAng, 4, col+'cc', 0.85);
+    skCtx.restore();
+  });
+
+  /* ── PARTICLES ── */
+  if(S.skAnim){
+    skCtx.save();
+    SKP.forEach(p=>{
+      const fade=p.t<0.07?p.t/0.07:p.t>0.93?(1-p.t)/0.07:1;
+      // dim particles on inactive rotation
+      const pActive = p.edge&&p.edge.obj ? p.edge.obj.rotation===_curDor : true;
+      const pAlpha = pActive ? p.alpha*fade : p.alpha*fade*0.2;
+      skCtx.globalAlpha=pAlpha;
+      if(p.trail&&p.trail.length>1){
+        skCtx.beginPath();
+        skCtx.moveTo(p.trail[0].x,p.trail[0].y);
+        for(let i=1;i<p.trail.length;i++) skCtx.lineTo(p.trail[i].x,p.trail[i].y);
+        skCtx.strokeStyle=p.col;skCtx.lineWidth=p.r*0.7;
+        skCtx.globalAlpha=pAlpha*0.35;
+        skCtx.stroke();
+      }
+      skCtx.globalAlpha=pAlpha;
+      skCtx.beginPath();skCtx.arc(p.cx,p.cy,p.r,0,Math.PI*2);
+      skCtx.fillStyle=p.col;
+      skCtx.shadowColor=p.col;skCtx.shadowBlur=p.r*2.5;
+      skCtx.fill();
+    });
+    skCtx.globalAlpha=1;
+    skCtx.restore();
+  }
+
+  /* ── LABELS ── */
+  skNodes.forEach(n=>{
+    const col=S.skMode==='status'?nodeCol(n.obj||{}):n.c;
+    const isActiveN = n.type==='branch'||n.type==='sub_branch' ? n.obj&&n.obj.rotation===_curDor : true;
+    const alphaL = isActiveN ? 1 : 0.25;
+
+    if(n.type==='intake'){
+      skCtx.save();
+      skCtx.beginPath();skCtx.arc(n.x,n.y,13,0,Math.PI*2);
+      skCtx.fillStyle='rgba(10,45,80,.95)';
+      skCtx.strokeStyle=ISO_MAIN;skCtx.lineWidth=2.5;
+      skCtx.shadowColor=ISO_MAIN;skCtx.shadowBlur=20;
+      skCtx.fill();skCtx.stroke();
+      skCtx.beginPath();skCtx.arc(n.x,n.y,5,0,Math.PI*2);
+      skCtx.fillStyle=ISO_MAIN+'cc';skCtx.fill();
+      skCtx.restore();
+      drawLabel(skCtx, n.x+14, n.y, n.label, '#1a6a90', false);
+      // Active rotation badge next to intake
+      const cur2=getCurrentRotation();
+      skCtx.save();
+      skCtx.font='700 8px Cairo,sans-serif';
+      const btxt='● دور '+cur2.dor+' نشط — يوم '+cur2.dayNum+'/'+cur2.days;
+      const btw=skCtx.measureText(btxt).width+12;
+      skCtx.fillStyle=DOR_COLOR[cur2.dor]+'33';
+      skCtx.strokeStyle=DOR_COLOR[cur2.dor];skCtx.lineWidth=1;
+      skCtx.beginPath();skCtx.roundRect(n.x+14,n.y+12,btw,14,3);skCtx.fill();skCtx.stroke();
+      skCtx.fillStyle=DOR_LABEL[cur2.dor];skCtx.textAlign='left';skCtx.textBaseline='middle';
+      skCtx.fillText(btxt,n.x+20,n.y+19);
+      skCtx.restore();
+      return;
+    }
+    if(n.type==='end'){
+      skCtx.save();
+      drawArrow(skCtx, n.x, n.y, Math.PI/2, 10, '#37515f', 0.8);
+      skCtx.font='bold 8px Cairo,sans-serif';
+      skCtx.fillStyle='rgba(55,81,95,.8)';
+      skCtx.textAlign='center';skCtx.textBaseline='top';
+      skCtx.fillText(n.label, n.x, n.y+8);
+      skCtx.restore();
+      return;
+    }
+
+    const r=n.type==='branch'?4.5:3;
+    skCtx.save();
+    skCtx.globalAlpha=alphaL;
+    skCtx.beginPath();skCtx.arc(n.x,n.y,r,0,Math.PI*2);
+    skCtx.fillStyle='rgba(240,248,255,.9)';
+    skCtx.strokeStyle=col;skCtx.lineWidth=2;
+    if(isActiveN){skCtx.shadowColor=col+'88';skCtx.shadowBlur=6;}
+    skCtx.fill();skCtx.stroke();
+    skCtx.restore();
+
+    skCtx.save();skCtx.globalAlpha=alphaL;
+    drawLabel(skCtx, n.x, n.y, n.label, col, n.isLeft);
+    skCtx.restore();
+  });
+
+  skCtx.restore();
+  drawMiniMap();
+}
+
+/* ── ANIMATION LOOP ── */
+function animFrame(){
+  if(!S.skAnim) return;
+  skTick++;
+
+  if(skTick%3===0){
+    const allEdges=[...skEdges.filter(e=>e.isSpine),...skEdges.filter(e=>e.isBranch),...skEdges.filter(e=>e.isSub)];
+    allEdges.forEach(e=>{
+      const rate=e.isSpine?0.65: Math.min(0.45,(e.Q/INTAKE.Q)*16+0.04);
+      if(Math.random()>rate) return;
+      const col=edgeCol(e);
+      const spd=e.isSpine?1.6+Math.random()*1.2:0.7+Math.random()*0.8;
+
+      if(e.isSpine){
+        SKP.push({cx:e.x0,cy:e.y0, mode:'vs',
+          x:e.x0, y0:e.y0, dy:e.y1-e.y0,
+          r:1.8+Math.random(),col,alpha:0.8+Math.random()*.15,speed:spd,
+          t:Math.random()*0.18,trail:[],isSpine:true,edge:e});
+      } else if(e.isBranch){
+        const xJ=skW*0.48+e.dir*SPINE_HW;
+        SKP.push({cx:xJ,cy:e.y0, mode:'hs',
+          y:e.y0, x0:xJ, dx:e.x1-xJ,
+          r:1.2+Math.random()*.6,col,alpha:0.65+Math.random()*.3,speed:spd*0.65,
+          t:Math.random()*0.12,trail:[],edge:e});
+      } else if(e.isSub){
+        SKP.push({cx:e.x0,cy:e.y0, mode:'sub',
+          x0:e.x0,y0:e.y0,ex:e.ex,ey:e.ey,x1:e.x1,y1:e.y1,
+          r:1+Math.random()*.5,col,alpha:0.5+Math.random()*.3,speed:spd*0.5,
+          t:0,trail:[],edge:e});
+      }
+    });
+    if(SKP.length>500) SKP=SKP.slice(-500);
+  }
+
+  SKP=SKP.filter(p=>{
+    p.t+=p.speed*0.012;
+    if(p.mode==='vs'){
+      p.cy=p.y0+p.dy*p.t; p.cx=p.x;
+    } else if(p.mode==='hs'){
+      p.cx=p.x0+p.dx*p.t; p.cy=p.y;
+    } else if(p.mode==='sub'){
+      const seg1=Math.abs(p.ey-p.y0), seg2=Math.abs(p.x1-p.ex);
+      const dist=p.t*(seg1+seg2)*40;
+      if(dist<=seg1){
+        const tf=dist/Math.max(seg1,1);
+        p.cx=p.x0; p.cy=p.y0+(p.ey-p.y0)*tf;
+      } else {
+        const tf=(dist-seg1)/Math.max(seg2,1);
+        p.cx=p.ex+(p.x1-p.ex)*Math.min(tf,1); p.cy=p.ey;
+      }
+    }
+    p.trail.push({x:p.cx,y:p.cy});
+    if(p.trail.length>8) p.trail.shift();
+    return p.t<1;
+  });
+
+  drawSankey();
+  S.skAnimId=requestAnimationFrame(animFrame);
+}
+
+function skResize(){
+  const wrap=document.getElementById('skWrap');
+  const r=wrap.getBoundingClientRect();
+  skW=Math.round(r.width); skH=Math.round(r.height);
+  const dpr=window.devicePixelRatio||1;
+  skCanvas.width=skW*dpr; skCanvas.height=skH*dpr;
+  skCanvas.style.width=skW+'px'; skCanvas.style.height=skH+'px';
+  mmCanvas.width=mmCanvas.offsetWidth*dpr; mmCanvas.height=mmCanvas.offsetHeight*dpr;
+  buildSankey();
+  if(!S.skAnim) drawSankey();
+}
+
+function skToggleAnim(){
+  S.skAnim=!S.skAnim;
+  const btn=document.getElementById('btnPlay');
+  btn.classList.toggle('on',S.skAnim);
+  btn.textContent=S.skAnim?'⏸ إيقاف':'▶ تدفق';
+  document.getElementById('skLive').textContent=S.skAnim?'● مباشر':'○ متوقف';
+  if(S.skAnim){SKP=[];animFrame();}
+  else{cancelAnimationFrame(S.skAnimId);drawSankey();}
+}
+
+function skMode(m){
+  S.skMode=m;
+  ['flow','perc','status'].forEach(x=>document.getElementById('btn'+x[0].toUpperCase()+x.slice(1))?.classList.toggle('on',m===x));
+  buildSankey();
+  if(!S.skAnim) drawSankey();
+  updateSkKpis();
+}
+
+function skZoomBy(f){
+  vp.scale=clamp(vp.scale*f,.15,6);
+  if(!S.skAnim) drawSankey();
+  document.getElementById('skZoomReadout').textContent=Math.round(vp.scale*100)+'%';
+}
+function skFitView(){vp={x:0,y:0,scale:1};buildSankey();if(!S.skAnim)drawSankey();document.getElementById('skZoomReadout').textContent='100%';}
+function skResetView(){vp={x:0,y:0,scale:1};SKP=[];buildSankey();if(!S.skAnim)drawSankey();document.getElementById('skZoomReadout').textContent='100%';}
+
+/* ── MINIMAP ── */
+function drawMiniMap(){
+  const dpr=window.devicePixelRatio||1;
+  mmCtx.setTransform(dpr,0,0,dpr,0,0);
+  const mW=mmCanvas.offsetWidth, mH=mmCanvas.offsetHeight;
+  mmCtx.clearRect(0,0,mW,mH);
+  mmCtx.fillStyle='rgba(220,232,240,.92)';mmCtx.fillRect(0,0,mW,mH);
+  const sx=mW/skW, sy=mH/skH;
+
+  // spine (vertical)
+  const sp=skEdges.find(e=>e.isSpine);
+  if(sp){
+    mmCtx.beginPath();mmCtx.moveTo(sp.x0*sx,sp.y0*sy);mmCtx.lineTo(sp.x1*sx,sp.y1*sy);
+    mmCtx.strokeStyle='rgba(15,80,140,.75)';mmCtx.lineWidth=3;mmCtx.stroke();
+  }
+  // branches
+  skEdges.filter(e=>e.isBranch).forEach(e=>{
+    const col=e.col+'88';
+    mmCtx.beginPath();mmCtx.moveTo(e.x0*sx,e.y0*sy);mmCtx.lineTo(e.x1*sx,e.y1*sy);
+    mmCtx.strokeStyle=col;mmCtx.lineWidth=Math.max(.8,e.lw*0.38);mmCtx.stroke();
+  });
+  // subs
+  skEdges.filter(e=>e.isSub).forEach(e=>{
+    const col=e.col+'55';
+    mmCtx.beginPath();mmCtx.moveTo(e.x0*sx,e.y0*sy);mmCtx.lineTo(e.ex*sx,e.ey*sy);mmCtx.lineTo(e.x1*sx,e.y1*sy);
+    mmCtx.strokeStyle=col;mmCtx.lineWidth=.8;mmCtx.stroke();
+  });
+  // viewport rect
+  mmCtx.strokeStyle='rgba(30,100,180,.8)';mmCtx.lineWidth=1.2;
+  mmCtx.strokeRect(-vp.x/vp.scale*sx,-vp.y/vp.scale*sy,skW/vp.scale*sx,skH/vp.scale*sy);
+  // weirs on minimap
+  const yT2=SK_PAD_T, yB2=skH-SK_PAD_B;
+  WEIRS.forEach(w=>{
+    const wy=(yT2+(w.km/37)*(yB2-yT2))*sy;
+    const wx=skW*0.48*sx;
+    mmCtx.beginPath();mmCtx.moveTo(wx-14*sx*skW/skW,wy);mmCtx.lineTo(wx+14*sx*skW/skW,wy);
+    mmCtx.strokeStyle='#e67e22';mmCtx.lineWidth=2;mmCtx.stroke();
+  });
+}
+
+/* ── PAN & ZOOM ── */
+skCanvas.addEventListener('mousedown',e=>{
+  dragState={active:true,startX:e.clientX,startY:e.clientY,vpX:vp.x,vpY:vp.y};
+  skCanvas.style.cursor='grabbing';
+});
+window.addEventListener('mousemove',e=>{
+  if(!dragState.active) return;
+  vp.x=dragState.vpX+(e.clientX-dragState.startX);
+  vp.y=dragState.vpY+(e.clientY-dragState.startY);
+  if(!S.skAnim) drawSankey();
+});
+window.addEventListener('mouseup',()=>{dragState.active=false;skCanvas.style.cursor='grab';});
+skCanvas.style.cursor='grab';
+
+skCanvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const f=e.deltaY<0?1.12:0.89;
+  // Zoom toward mouse position
+  const r=skCanvas.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  vp.x=mx-(mx-vp.x)*f;
+  vp.y=my-(my-vp.y)*f;
+  vp.scale=clamp(vp.scale*f,.15,6);
+  if(!S.skAnim) drawSankey();
+  document.getElementById('skZoomReadout').textContent=Math.round(vp.scale*100)+'%';
+},{passive:false});
+
+// Touch
+let touch1=null, touch2Dist=null;
+skCanvas.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===1){
+    touch1={startX:e.touches[0].clientX,startY:e.touches[0].clientY,vpX:vp.x,vpY:vp.y};
+    touch2Dist=null;
+  } else if(e.touches.length===2){
+    touch2Dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  }
+},{passive:false});
+skCanvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&touch1&&!touch2Dist){
+    vp.x=touch1.vpX+(e.touches[0].clientX-touch1.startX);
+    vp.y=touch1.vpY+(e.touches[0].clientY-touch1.startY);
+    if(!S.skAnim) drawSankey();
+  } else if(e.touches.length===2&&touch2Dist!=null){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    const f=d/touch2Dist;
+    vp.scale=clamp(vp.scale*f,.15,6);
+    touch2Dist=d;
+    if(!S.skAnim) drawSankey();
+    document.getElementById('skZoomReadout').textContent=Math.round(vp.scale*100)+'%';
+  }
+},{passive:false});
+skCanvas.addEventListener('touchend',e=>{if(e.touches.length<2)touch2Dist=null;if(e.touches.length===0)touch1=null;});
+
+/* ── TOOLTIP ── */
+let hoveredNode=null;
+skCanvas.addEventListener('mousemove',e=>{
+  const r=skCanvas.getBoundingClientRect();
+  const mx=(e.clientX-r.left-vp.x)/vp.scale;
+  const my=(e.clientY-r.top -vp.y)/vp.scale;
+  let hit=null,bd=9999;
+  skNodes.forEach(n=>{
+    if(!n.obj) return;
+    const d=Math.hypot(n.x-mx,n.y-my);
+    const hitR = n.type==='intake'?22:18;
+    if(d<hitR&&d<bd){bd=d;hit=n;}
+  });
+  const tip=document.getElementById('skTip');
+  if(hit&&hit.obj){
+    hoveredNode=hit;
+    const c=hit.obj;
+    const col=hit.c;
+    tip.style.display='block';
+    const tipX=Math.min(e.clientX-r.left+14, skW-260);
+    const tipY=Math.max(e.clientY-r.top-100, 8);
+    tip.style.left=tipX+'px'; tip.style.top=tipY+'px';
+    tip.innerHTML=`
+      <div class="tt-name" style="color:${col}">${c.name||hit.label}</div>
+      <div class="tt-row"><span>التصرف Q</span><span>${n2(c.Q,3)} م³/ث</span></div>
+      <div class="tt-row"><span>الطول</span><span>${n2(c.len,3)} كم</span></div>
+      <div class="tt-row"><span>الزمام</span><span>${c.feddan?.toLocaleString()} فدان</span></div>
+      <div class="tt-row"><span>منسوب قاع</span><span>${n2(c.bed,2)} م</span></div>
+      <div class="tt-row"><span>أقصى منسوب</span><span>${n2(c.max_wsl,2)} م</span></div>
+      <div class="tt-row"><span>دور</span><span style="color:${ROT_COLORS[c.rotation]||col};font-weight:800">${c.rotation}</span></div>
+      <div class="tt-row"><span>المغذى</span><span>${c.feeder}</span></div>`;
+  } else {
+    hoveredNode=null;
+    tip.style.display='none';
+  }
+});
+skCanvas.addEventListener('mouseleave',()=>{
+  hoveredNode=null;
+  document.getElementById('skTip').style.display='none';
+});
+skCanvas.addEventListener('click',e=>{
+  const r=skCanvas.getBoundingClientRect();
+  const mx=(e.clientX-r.left-vp.x)/vp.scale;
+  const my=(e.clientY-r.top -vp.y)/vp.scale;
+  let hit=null,bd=9999;
+  skNodes.forEach(n=>{
+    if(!n.obj) return;
+    const d=Math.hypot(n.x-mx,n.y-my);
+    if(d<22&&d<bd){bd=d;hit=n;}
+  });
+  if(hit&&hit.obj) openModal(hit.obj);
+});
+// Touch tap
+skCanvas.addEventListener('touchend',e=>{
+  if(e.changedTouches.length===1){
+    const r=skCanvas.getBoundingClientRect();
+    const tx=e.changedTouches[0].clientX-r.left;
+    const ty=e.changedTouches[0].clientY-r.top;
+    const mx=(tx-vp.x)/vp.scale, my=(ty-vp.y)/vp.scale;
+    let hit=null,bd=9999;
+    skNodes.forEach(n=>{
+      if(!n.obj) return;
+      const d=Math.hypot(n.x-mx,n.y-my);
+      if(d<24&&d<bd){bd=d;hit=n;}
+    });
+    if(hit&&hit.obj) openModal(hit.obj);
+  }
+});
+
+// KPIs
+function updateSkKpis(){
+  const cur = getCurrentRotation();
+  const totalQ=INTAKE.Q;
+  const activeQ=getActiveQ();
+  const totalFed=CANALS.reduce((s,c)=>s+c.feddan,0);
+  const activeFed=CANALS.filter(c=>c.rotation===cur.dor).reduce((s,c)=>s+c.feddan,0);
+  const warns=CANALS.filter(c=>c.status==='warn').length;
+  document.getElementById('skKpis').innerHTML=[
+    {l:'Q المأخذ',v:n2(totalQ,2),u:'م³/ث',cls:''},
+    {l:'Q النشط — دور '+cur.dor,v:n2(activeQ,2),u:'م³/ث',cls:' ok'},
+    {l:'زمام دور '+cur.dor,v:activeFed.toLocaleString(),u:'فدان',cls:' ok'},
+    {l:'اليوم '+cur.dayNum+'/'+cur.days,v:'دور '+cur.dor,u:'',cls:''},
+    {l:'تنبيهات',v:warns,u:'',cls:warns?' warn':' ok'},
+  ].map(k=>`<div class="sk-kpi"><div class="kl">${k.l}</div><div class="kv${k.cls}" style="${k.l.includes('دور')&&!k.l.includes('تنب')?'color:'+DOR_LABEL[cur.dor]:''}">${k.v}</div><div class="ku">${k.u}</div></div>`).join('');
+
+  // update legend badge
+  const badge=document.getElementById('skLiveDor');
+  if(badge){
+    badge.textContent='● دور '+cur.dor+' نشط — اليوم '+cur.dayNum+'/'+cur.days;
+    badge.style.background=DOR_COLOR[cur.dor]+'33';
+    badge.style.color=DOR_LABEL[cur.dor];
+    badge.style.border='1px solid '+DOR_COLOR[cur.dor]+'66';
+  }
+}
+
+// drawMiniMap defined above in sankey engine
+
+/* ═══════════════════════════════════════
+   HEATMAP
+═══════════════════════════════════════ */
+const hCanvas=document.getElementById('heatCanvas');
+const hCtx=hCanvas.getContext('2d');
+
+function hMode(m){
+  S.hMode=m;
+  ['bed','max','len','fed'].forEach(x=>document.getElementById('hBtn'+x[0].toUpperCase()+x.slice(1))?.classList.toggle('on',m===x));
+  document.getElementById('hScaleLbl').textContent={bed:'منسوب قاع (م)',max:'أقصى منسوب (م)',len:'طول (كم)',fed:'زمام (فدان)'}[m]||m;
+  drawHeat();renderHeatTable();
+}
+
+function hVal(c,m){
+  if(m==='bed') return c.bed;
+  if(m==='max') return c.max_wsl;
+  if(m==='len') return c.len;
+  if(m==='fed') return c.feddan;
+  return null;
+}
+function hColor(v,allVals){
+  const mn=Math.min(...allVals), mx=Math.max(...allVals);
+  const t=(v-mn)/Math.max(mx-mn,0.01);
+  const r=Math.round(t*255), g=Math.round((1-t)*200), b=Math.round((1-t)*100);
+  return `rgb(${r},${g+55},${b+55})`;
+}
+
+function drawHeat(){
+  const W=hCanvas.offsetWidth||300, H=90;
+  hCanvas.width=W*window.devicePixelRatio; hCanvas.height=H*window.devicePixelRatio;
+  hCanvas.style.width=W+'px'; hCanvas.style.height=H+'px';
+  hCtx.setTransform(window.devicePixelRatio,0,0,window.devicePixelRatio,0,0);
+  hCtx.clearRect(0,0,W,H);
+  const ns=CANALS.filter(c=>c.type!=='sub_branch').sort((a,b)=>a.km-b.km);
+  const vals=ns.map(c=>hVal(c,S.hMode));
+  const allVals=vals.filter(v=>v!=null);
+  if(!ns.length||!allVals.length) return;
+  const maxKm=37;
+  const trkY=H*.3,trkH=H*.35;
+  hCtx.fillStyle='rgba(12,29,48,.7)';hCtx.beginPath();hCtx.roundRect(0,trkY,W,trkH,4);hCtx.fill();
+  ns.forEach((n,i)=>{
+    const kx=(n.km/maxKm)*W;
+    const v=vals[i];
+    if(v==null) return;
+    const col=hColor(v,allVals);
+    const nkx=i<ns.length-1?(ns[i+1].km/maxKm)*W:W;
+    const g=hCtx.createLinearGradient(kx,0,nkx,0);
+    g.addColorStop(0,col+'cc');g.addColorStop(1,col+'44');
+    hCtx.fillStyle=g;hCtx.fillRect(kx,trkY,nkx-kx,trkH);
+    const mh=n.type==='main'?H*.65:H*.45;
+    const my2=(H-mh)/2;
+    hCtx.fillStyle=col;hCtx.globalAlpha=.85;
+    hCtx.beginPath();hCtx.roundRect(kx-2,my2,4,mh,2);hCtx.fill();
+    hCtx.globalAlpha=1;
+    if(i===0||i===ns.length-1||n.type==='main'){
+      hCtx.save();hCtx.font='7px IBM Plex Mono,monospace';hCtx.fillStyle=col;hCtx.textAlign='center';
+      hCtx.fillText(n2(v,1),kx,trkY-3);
+      hCtx.fillStyle='rgba(255,255,255,.25)';hCtx.font='6px Cairo,sans-serif';
+      hCtx.fillText('ك'+n.km,kx,trkY+trkH+10);
+      hCtx.restore();
+    }
+  });
+  hCanvas._ns=ns;hCanvas._vals=vals;hCanvas._allVals=allVals;
+}
+
+hCanvas.addEventListener('mousemove',e=>{
+  const r=hCanvas.getBoundingClientRect(),mx=e.clientX-r.left;
+  const W=r.width,ns=hCanvas._ns||[],vals=hCanvas._vals||[];
+  if(!ns.length) return;
+  const km=(mx/W)*37;
+  let best=0,bd=999;
+  ns.forEach((n,i)=>{const d=Math.abs(n.km-km);if(d<bd){bd=d;best=i;}});
+  const n=ns[best],v=vals[best];
+  const tip=document.getElementById('heatTip');
+  tip.style.display='block';tip.style.left=Math.min(mx+8,W-180)+'px';tip.style.top='4px';
+  tip.innerHTML=`<b style="color:var(--cyan)">${n.name}</b><br>ك${n.km} | ${S.hMode}: <b>${n2(v,2)}</b>`;
+});
+hCanvas.addEventListener('mouseleave',()=>document.getElementById('heatTip').style.display='none');
+
+function renderHeatTable(){
+  const tbl=document.getElementById('heatTable');
+  const cols='1fr 50px 55px 55px 50px';
+  const ns=CANALS.slice().sort((a,b)=>b.Q-a.Q);
+  tbl.innerHTML=`<div class="heat-row header" style="grid-template-columns:${cols}"><span>المجرى</span><span>Q</span><span>طول كم</span><span>زمام</span><span>دور</span></div>`+
+  ns.map(c=>`<div class="heat-row" style="grid-template-columns:${cols}" onclick="openModal(CANALS.find(x=>x.id==='${c.id}'))">
+    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2)">${c.name}</span>
+    <span class="mono" style="color:var(--cyan);text-align:center">${n2(c.Q,3)}</span>
+    <span class="mono" style="text-align:center">${n2(c.len,2)}</span>
+    <span class="mono" style="text-align:center">${c.feddan?.toLocaleString()}</span>
+    <span style="text-align:center;color:${ROT_COLORS[c.rotation]}">${c.rotation}</span>
+  </div>`).join('');
+}
+
+/* ═══════════════════════════════════════
+   HYDRAULICS ENGINE — ENHANCED
+   Orifice Flow + Newton-Raphson Normal Depth
+   Cross Section + Longitudinal Profile HGL/EGL
+═══════════════════════════════════════ */
+
+/* Global orifice state */
+let hydState = {
+  gateOpening: 1.8,
+  actualQ: 0,
+  normalDepth: 0,
+  V: 0,
+  Fr: 0,
+  E: 0
+};
+
+/* Orifice flow: Q = Cd * B * a * sqrt(2g*(H-a/2)) */
+function calcOrificeQ(a) {
+  const B = 12, Cd = 0.62, g = 9.81;
+  const H_up = 4.5; // منسوب مياه ترعة الجيزة فوق القاع
+  const h = Math.max(H_up - a/2, 0.05);
+  return Cd * B * a * Math.sqrt(2 * g * h);
+}
+
+/* Newton-Raphson normal depth solver */
+function normalDepth(Q, b, z, n_mann, S) {
+  let d = 1.0;
+  for (let i = 0; i < 20; i++) {
+    const A = (b + z*d)*d;
+    const P = b + 2*d*Math.sqrt(1+z*z);
+    const R = A/P;
+    const Qc = (1/n_mann)*A*Math.pow(R,2/3)*Math.sqrt(S);
+    if (Math.abs(Qc-Q)<0.001) break;
+    d *= Math.pow(Q/Math.max(Qc,0.001), 0.4);
+    d = Math.max(d, 0.05);
+  }
+  return d;
+}
+
+function onHydGate(v) {
+  hydState.gateOpening = parseFloat(v);
+  document.getElementById('hydGateVal').textContent = parseFloat(v).toFixed(1)+'م';
+  updateOrificeKpis();
+  renderHydraulics();
+}
+
+function updateOrificeKpis() {
+  const a = hydState.gateOpening;
+  const Q = calcOrificeQ(a);
+  hydState.actualQ = Q;
+  const b=12, z=1.5, n_mann=0.022, S=0.0001;
+  const d = normalDepth(Q, b, z, n_mann, S);
+  hydState.normalDepth = d;
+  const A = (b+z*d)*d;
+  hydState.V = Q/A;
+  hydState.Fr = hydState.V / Math.sqrt(9.81*d);
+  hydState.E = d + (hydState.V**2)/(2*9.81);
+  document.getElementById('orificeKpis').innerHTML = [
+    {l:'Q بوابة',  v:n2(Q,2),      u:'م³/ث', c:'var(--cyan)'},
+    {l:'عمق طبيعي',v:n2(d,2),      u:'م',     c:'var(--green)'},
+    {l:'سرعة V',   v:n2(hydState.V,3), u:'م/ث', c:'var(--amber)'},
+    {l:'Fr فرود',  v:n2(hydState.Fr,3),u:'',   c:hydState.Fr>0.9?'var(--red)':hydState.Fr>0.65?'var(--amber)':'var(--green)'},
+  ].map(k=>`<div class="hyd-kpi"><div class="hl">${k.l}</div><div class="hv" style="color:${k.c}">${k.v}<span style="font-size:.55rem;color:var(--tx3)"> ${k.u}</span></div></div>`).join('');
+}
+
+function initHydraulicsTab(){
+  const sel=document.getElementById('hydSel');
+  sel.innerHTML=CANALS.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  updateOrificeKpis();
+  renderHydraulics();
+}
+
+function renderHydraulics(){
+  const id=document.getElementById('hydSel').value;
+  const c=CANALS.find(x=>x.id===id);
+  if(!c) return;
+  const n_mann=0.025;
+  const S_slope=0.0006;
+  const b=c.type==='main'?10:c.type==='branch'?2:1;
+  const z=1.5;
+  const d=c.depth;
+  const A=d*(b+z*d);
+  const P=b+2*d*Math.sqrt(1+z*z);
+  const R=A/P;
+  const V_mann=(1/n_mann)*Math.pow(R,2/3)*Math.pow(S_slope,0.5);
+  const Q_mann=V_mann*A;
+  const Fr=V_mann/Math.sqrt(9.81*d);
+  const frCls=Fr>0.92?'bad':Fr>0.65?'warn':'ok';
+  const E_spec = d + (V_mann**2)/(2*9.81);
+  document.getElementById('hydBody').innerHTML=`
+    <div class="hyd-kpi-grid">
+      <div class="hyd-kpi"><div class="hl">Q مانينج</div><div class="hv">${n2(Q_mann,2)} م³/ث</div></div>
+      <div class="hyd-kpi"><div class="hl">سرعة V</div><div class="hv">${n2(V_mann,3)} م/ث</div></div>
+      <div class="hyd-kpi"><div class="hl">Fr فرود</div><div class="hv ${frCls}">${n2(Fr,3)}</div></div>
+      <div class="hyd-kpi"><div class="hl">طاقة E</div><div class="hv">${n2(E_spec,3)} م</div></div>
+      <div class="hyd-kpi"><div class="hl">مساحة A</div><div class="hv">${n2(A,2)} م²</div></div>
+      <div class="hyd-kpi"><div class="hl">نصف القطر R</div><div class="hv">${n2(R,3)} م</div></div>
+    </div>
+    <div class="hyd-bar-wrap">
+      <div class="section-title">معلمات القطاع</div>
+      ${[
+        {l:'عرض القاع',v:b,max:12,unit:'م'},
+        {l:'العمق',v:d,max:4,unit:'م'},
+        {l:'الميل الجانبى',v:z,max:3,unit:''},
+        {l:'منسوب القاع',v:c.bed,max:20,unit:'م'},
+        {l:'أقصى منسوب',v:c.max_wsl,max:22,unit:'م'},
+      ].map(x=>`<div class="hyd-bar-row">
+        <span class="hyd-bar-lbl">${x.l}</span>
+        <div class="hyd-bar-track"><div class="hyd-bar-fill" style="width:${Math.min(x.v/x.max*100,100)}%;background:var(--cyan)"></div></div>
+        <span class="hyd-bar-val">${n2(x.v,2)} ${x.unit}</span>
+      </div>`).join('')}
+    </div>
+    <div class="hyd-eq">
+      <div class="section-title">معادلة مانينج | بوابة Orifice</div>
+      <span class="eq">Q_mann = (1/n) × A × R^(2/3) × S^(1/2)</span>
+      <span>Q_orifice = Cd × B × a × √(2g·H) | a = ${n2(hydState.gateOpening,1)}م → Q = ${n2(hydState.actualQ,2)} م³/ث</span>
+      <span>n = ${n_mann} | S = ${S_slope} | R = ${n2(R,3)} م | E = ${n2(E_spec,3)} م</span>
+    </div>
+    <div class="hyd-warn ${frCls}">
+      ${Fr<0.65?'✅ الجريان هادئ — فرود آمن (Fr < 0.65)':Fr<0.92?'⚠️ تحذير — اقتراب من الجريان الحرج':'🔴 حرج — فرود مرتفع (Fr > 0.92)'}
+    </div>
+  `;
+  drawHydCanvas(c, d, b, z, Fr);
+  drawLongitudinalProfile();
+}
+
+/* ── Cross Section Canvas ── */
+function drawHydCanvas(c, depth, b, z, Fr){
+  const canvas=document.getElementById('hydCanvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.offsetWidth||300, H=140;
+  canvas.width=W*window.devicePixelRatio; canvas.height=H*window.devicePixelRatio;
+  ctx.setTransform(window.devicePixelRatio,0,0,window.devicePixelRatio,0,0);
+  ctx.clearRect(0,0,W,H);
+
+  const maxD = Math.max(depth*1.6, 3.5);
+  const pad=24;
+  const scale = Math.min((W-pad*2)/(b+2*z*maxD*1.1), (H-pad*2)/maxD);
+  const cx=W/2, bedY=H-pad;
+  const bw2=(b/2)*scale;
+  const tw2=(b/2+z*depth)*scale;
+  const dh=depth*scale;
+  const bankH=maxD*scale;
+  const bankW2=(b/2+z*maxD)*scale;
+
+  // Bank fill
+  ctx.beginPath();
+  ctx.moveTo(cx-bankW2,bedY-bankH);
+  ctx.lineTo(cx-bw2,bedY);ctx.lineTo(cx+bw2,bedY);
+  ctx.lineTo(cx+bankW2,bedY-bankH);
+  ctx.fillStyle='rgba(100,120,80,.18)';ctx.fill();
+
+  // Canal outline
+  ctx.beginPath();
+  ctx.moveTo(cx-tw2,bedY-dh);
+  ctx.lineTo(cx-bw2,bedY);ctx.lineTo(cx+bw2,bedY);
+  ctx.lineTo(cx+tw2,bedY-dh);
+  ctx.strokeStyle='#00e5ff';ctx.lineWidth=2.5;ctx.stroke();
+
+  // Water fill
+  ctx.beginPath();
+  ctx.moveTo(cx-tw2,bedY-dh);
+  ctx.lineTo(cx+tw2,bedY-dh);
+  ctx.lineTo(cx+bw2,bedY);ctx.lineTo(cx-bw2,bedY);
+  ctx.closePath();
+  ctx.fillStyle='rgba(0,229,255,.18)';ctx.fill();
+
+  // Water surface line
+  ctx.beginPath();
+  ctx.moveTo(cx-tw2,bedY-dh);ctx.lineTo(cx+tw2,bedY-dh);
+  ctx.strokeStyle='rgba(0,200,255,.7)';ctx.lineWidth=1.5;
+  ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);
+
+  // EGL line (E = d + V²/2g above bed)
+  const A=(b+z*depth)*depth;
+  const V=Math.max(hydState.V,0.01);
+  const V2g=(V**2)/(2*9.81);
+  const eglY=bedY-dh-V2g*scale;
+  ctx.beginPath();
+  ctx.moveTo(cx-tw2-10,eglY);ctx.lineTo(cx+tw2+10,eglY);
+  ctx.strokeStyle='rgba(255,202,40,.6)';ctx.lineWidth=1;
+  ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+
+  // Labels
+  ctx.font=`700 8px 'IBM Plex Mono',monospace`;ctx.fillStyle='rgba(90,138,173,.9)';
+  ctx.textAlign='center';ctx.fillText(`b=${b}م`,cx,bedY+16);
+  ctx.textAlign='left';ctx.fillStyle='rgba(0,229,255,.8)';
+  ctx.fillText(`y=${n2(depth,2)}م`,cx+tw2+4,bedY-dh/2);
+  ctx.fillStyle='rgba(255,202,40,.7)';
+  ctx.fillText('EGL',cx+tw2+4,eglY+4);
+}
+
+/* ── Longitudinal Profile HGL/EGL ── */
+function drawLongitudinalProfile(){
+  const canvas=document.getElementById('hydLongCanvas');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.offsetWidth||300, H=130;
+  canvas.width=W*window.devicePixelRatio; canvas.height=H*window.devicePixelRatio;
+  ctx.setTransform(window.devicePixelRatio,0,0,window.devicePixelRatio,0,0);
+  ctx.clearRect(0,0,W,H);
+
+  const padL=40, padR=16, padT=14, padB=28;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+
+  // Build profile points from main canal data sorted by km
+  const main=CANALS.find(c=>c.id==='mansouriya');
+  const branches=CANALS.filter(c=>c.feeder==='المنصورية').sort((a,b)=>a.km-b.km);
+  const pts=[{km:0, bed:main.bed, wsl:main.max_wsl}];
+  branches.forEach(b=>pts.push({km:b.km_feeder, bed:main.bed-(b.km_feeder*0.0001*1000), wsl:b.max_wsl-(b.km_feeder*0.00005*1000)}));
+  pts.push({km:37, bed:main.bed-3.7, wsl:main.min_wsl-0.5});
+
+  const kmMin=0, kmMax=37;
+  const bedMin=Math.min(...pts.map(p=>p.bed))-0.3;
+  const wslMax=Math.max(...pts.map(p=>p.wsl))+0.3;
+  const yRange=wslMax-bedMin;
+
+  const toX=km=>padL+(km-kmMin)/(kmMax-kmMin)*plotW;
+  const toY=val=>padT+plotH-(val-bedMin)/yRange*plotH;
+
+  // Grid lines
+  ctx.strokeStyle='rgba(0,229,255,.07)';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=padT+plotH/4*i;
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(padL+plotW,y);ctx.stroke();
+  }
+  [0,10,20,30,37].forEach(km=>{
+    const x=toX(km);
+    ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,padT+plotH);ctx.stroke();
+  });
+
+  // Weir lines
+  WEIRS.forEach(w=>{
+    const x=toX(w.km);
+    ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,padT+plotH);
+    ctx.strokeStyle='rgba(255,109,0,.6)';ctx.lineWidth=1.5;ctx.setLineDash([3,2]);ctx.stroke();ctx.setLineDash([]);
+    ctx.font='7px Cairo,sans-serif';ctx.fillStyle='rgba(255,109,0,.8)';ctx.textAlign='center';
+    ctx.fillText(w.name,x,padT+7);
+  });
+
+  // Bed Line
+  ctx.beginPath();
+  pts.forEach((p,i)=>{i===0?ctx.moveTo(toX(p.km),toY(p.bed)):ctx.lineTo(toX(p.km),toY(p.bed));});
+  ctx.strokeStyle='rgba(139,90,60,.9)';ctx.lineWidth=2.5;ctx.stroke();
+  // Bed fill
+  ctx.lineTo(toX(pts[pts.length-1].km),padT+plotH);ctx.lineTo(toX(0),padT+plotH);ctx.closePath();
+  ctx.fillStyle='rgba(80,50,30,.25)';ctx.fill();
+
+  // HGL (Water Surface)
+  ctx.beginPath();
+  pts.forEach((p,i)=>{i===0?ctx.moveTo(toX(p.km),toY(p.wsl)):ctx.lineTo(toX(p.km),toY(p.wsl));});
+  ctx.strokeStyle='rgba(0,229,255,.9)';ctx.lineWidth=2;ctx.stroke();
+
+  // Water fill between HGL and bed
+  ctx.beginPath();
+  pts.forEach((p,i)=>{i===0?ctx.moveTo(toX(p.km),toY(p.wsl)):ctx.lineTo(toX(p.km),toY(p.wsl));});
+  [...pts].reverse().forEach(p=>ctx.lineTo(toX(p.km),toY(p.bed)));
+  ctx.closePath();ctx.fillStyle='rgba(0,229,255,.09)';ctx.fill();
+
+  // EGL (add V²/2g)
+  const V2g=(hydState.V**2)/(2*9.81)||0.1;
+  ctx.beginPath();
+  pts.forEach((p,i)=>{i===0?ctx.moveTo(toX(p.km),toY(p.wsl+V2g)):ctx.lineTo(toX(p.km),toY(p.wsl+V2g*0.8));});
+  ctx.strokeStyle='rgba(255,202,40,.7)';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);ctx.stroke();ctx.setLineDash([]);
+
+  // Axis labels
+  ctx.font='7px IBM Plex Mono,monospace';ctx.fillStyle='rgba(90,138,173,.8)';ctx.textAlign='center';
+  [0,10,20,30,37].forEach(km=>ctx.fillText('ك'+km,toX(km),padT+plotH+18));
+  ctx.textAlign='right';ctx.fillStyle='rgba(0,229,255,.7)';
+  [bedMin,bedMin+yRange*0.5,wslMax].forEach(v=>ctx.fillText(n2(v,1),padL-4,toY(v)+3));
+
+  // Legend
+  ctx.font='8px Cairo,sans-serif';ctx.textAlign='right';
+  [[160,'rgba(0,229,255,.9)','HGL منسوب مياه'],[110,'rgba(255,202,40,.7)','EGL خط الطاقة'],[60,'rgba(139,90,60,.9)','قاع الترعة']].forEach(([x,col,lbl])=>{
+    ctx.fillStyle=col;ctx.fillRect(W-x,padT,18,4);
+    ctx.fillStyle='rgba(150,200,220,.7)';ctx.fillText(lbl,W-x-4,padT+10);
+  });
+}
+
+/* ═══════════════════════════════════════
+   SCENARIOS
+═══════════════════════════════════════ */
+const SCENARIOS=[
+  {id:'balanced',icon:'⚖️',name:'تشغيل متوازن',desc:'توزيع عادل بين الأدوار بنسبة 100%',gate:62,inflow:1.0},
+  {id:'flood',icon:'🌊',name:'فيضان / وفرة',desc:'تصرف مرتفع — فتح كامل 90%',gate:90,inflow:1.4},
+  {id:'drought',icon:'☀️',name:'شح مائي',desc:'ترشيد التوزيع — فتح 40%',gate:40,inflow:0.65},
+  {id:'summer',icon:'🌡️',name:'ذروة الصيف',desc:'زيادة طلب الزراعة — 80%',gate:80,inflow:1.2},
+];
+let activeScen=null;
+function initScenarios(){
+  document.getElementById('scenCards').innerHTML=SCENARIOS.map(sc=>`
+    <div class="scen-card ${activeScen===sc.id?'active-scen':''}" onclick="applyScen('${sc.id}')">
+      <span class="sc-icon">${sc.icon}</span>
+      <div class="sc-name">${sc.name}</div>
+      <div class="sc-desc">${sc.desc}</div>
+    </div>`).join('');
+}
+function applyScen(id){
+  activeScen=id;
+  const sc=SCENARIOS.find(s=>s.id===id);
+  if(!sc) return;
+  S.gate=sc.gate; document.getElementById('gateSlider').value=sc.gate; document.getElementById('gateVal').textContent=sc.gate+'%';
+  document.getElementById('tbScen').textContent=sc.name;
+  rebalance();
+  const res=document.getElementById('scenResult');
+  res.style.display='block';
+  document.getElementById('scenResultBody').innerHTML=[
+    {l:'فتحة البوابة',v:sc.gate+'%'},
+    {l:'معامل التصرف',v:sc.inflow},
+    {l:'Q الإجمالي',v:n2(INTAKE.Q*sc.inflow,2)+' م³/ث'},
+  ].map(r=>`<div class="sr-row"><span class="sr-l">${r.l}</span><span class="sr-v">${r.v}</span></div>`).join('');
+  initScenarios();
+}
+function onScenSlider(k,v){
+  if(k==='gate'){S.gate=+v;document.getElementById('sfGate').textContent=v+'%';}
+  if(k==='inflow') document.getElementById('sfInflow').textContent=(+v).toFixed(2);
+}
+function applyCustomScen(){activeScen=null;rebalance();}
+
+/* ═══════════════════════════════════════
+   COMMAND TAB
+═══════════════════════════════════════ */
+let autoTimer=null;
+function renderCmd(){
+  const cur=getCurrentRotation();
+  const nxt=getNextRotation();
+  const warns=CANALS.filter(c=>c.status==='warn').length;
+  const totalQ=INTAKE.Q;
+  const activeQ=getActiveQ();
+  const activeFed=CANALS.filter(c=>c.rotation===cur.dor).reduce((s,c)=>s+c.feddan,0);
+  document.getElementById('cmdKpis').innerHTML=[
+    {l:'Q المأخذ',v:n2(totalQ,2)+' م³/ث',cls:' ok'},
+    {l:'Q دور '+cur.dor+' النشط',v:n2(activeQ,2)+' م³/ث',cls:' ok',col:DOR_LABEL[cur.dor]},
+    {l:'فتحة البوابة',v:S.gate+'%',cls:''},
+    {l:'الدور النشط',v:'دور '+cur.dor+' — يوم '+cur.dayNum+'/'+cur.days,cls:'',col:DOR_LABEL[cur.dor]},
+    {l:'ينتهي دور '+cur.dor,v:new Date(cur.end+'T00:00:00').toLocaleDateString('ar-EG',{day:'numeric',month:'short'}),cls:''},
+    {l:'الدور التالي',v:nxt?'دور '+nxt.dor:'—',cls:'',col:nxt?DOR_LABEL[nxt.dor]:''},
+    {l:'زمام دور '+cur.dor,v:activeFed.toLocaleString()+' فدان',cls:''},
+    {l:'تنبيهات',v:warns+(warns?'🟡':'✅'),cls:warns?' warn':' ok'},
+  ].map(k=>`<div class="cmd-kpi"><div class="kl">${k.l}</div><div class="kv${k.cls}" ${k.col?'style="color:'+k.col+'"':''}>${k.v}</div></div>`).join('');
+  renderCmdAlerts();
+  renderForecast();
+}
+function renderCmdAlerts(){
+  const cur=getCurrentRotation();
+  const out=CANALS.filter(c=>c.status==='warn').map(c=>({cls:'warn',txt:`${c.name}: عمق ${n2(c.depth,2)} م منخفض`}));
+  // Add rotation transition alert if last day
+  if(cur.dayNum===cur.days){
+    const nxt=getNextRotation();
+    if(nxt) out.unshift({cls:'warn',txt:`⏰ آخر يوم في دور ${cur.dor} — غداً يبدأ دور ${nxt.dor}`});
+  }
+  if(!out.length) out.push({cls:'ok',txt:`✅ الوضع الهيدروليكي مستقر — دور ${cur.dor} نشط — لا تنبيهات`});
+  document.getElementById('cmdAlerts').innerHTML=out.slice(0,8).map(a=>`<div class="cmd-alert ${a.cls}">${a.txt}</div>`).join('');
+}
+function renderForecast(){
+  const cur=getCurrentRotation();
+  const nxt=getNextRotation();
+  const g=S.gate;
+  const mode=g>78?'ضخ تصرف مرتفع':g<38?'ترشيد مائي':'تشغيل متوازن';
+  const daysLeft=cur.days-cur.dayNum;
+  document.getElementById('cmdForecast').innerHTML=
+    `<b style="color:${DOR_LABEL[cur.dor]}">دور ${cur.dor}</b> — اليوم ${cur.dayNum} من ${cur.days} | متبقي ${daysLeft} يوم<br>`+
+    (nxt?`التالي: <b style="color:${DOR_LABEL[nxt.dor]}">دور ${nxt.dor}</b> يبدأ ${new Date(nxt.start+'T00:00:00').toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'long'})}<br>`:'')+ 
+    `الوضع المتوقع: ${mode} | بوابة ${g}% | Q إجمالي ${n2(INTAKE.Q,1)} م³/ث`;
+}
+function onGate(v){S.gate=+v;document.getElementById('gateVal').textContent=v+'%';rebalance();}
+function rebalance(){if(S.tab==='command')renderCmd();updateTopbar();if(!S.skAnim)drawSankey();}
+function toggleAuto(){
+  const btn=document.getElementById('cmdAutoBtn');
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;btn.textContent='▶ تشغيل ذكي';btn.classList.remove('danger');btn.classList.add('primary');}
+  else{autoTimer=setInterval(autoStep,2500);autoStep();btn.textContent='⏹ إيقاف';btn.classList.remove('primary');btn.classList.add('danger');}
+}
+function autoStep(){
+  let g=S.gate+(Math.random()>0.5?2:-2);
+  S.gate=clamp(g,20,90);
+  document.getElementById('gateSlider').value=S.gate;
+  document.getElementById('gateVal').textContent=S.gate+'%';
+  rebalance();
+}
+
+/* ═══════════════════════════════════════
+   EMERGENCY SIMULATION
+═══════════════════════════════════════ */
+function simulateBurst(){
+  const kmList=[22.86,16.27,28.54];
+  const km=kmList[Math.floor(Math.random()*kmList.length)];
+  const canal=CANALS.find(c=>Math.abs((c.km_feeder||c.km)-km)<0.5)||CANALS[10];
+  const res=document.getElementById('burstResult');
+  res.style.display='block';
+  res.innerHTML=`
+    🚨 <b style="color:var(--red)">إنذار طوارئ — محاكاة كسر جسر</b><br>
+    📍 الموقع المرصود: <b>${canal.name}</b> — ك ${km}<br>
+    📉 انخفاض مفاجئ في المنسوب: −${(Math.random()*0.8+0.4).toFixed(2)} م<br>
+    ⚠️ Q الفائض المتوقع: ${(Math.random()*2+1).toFixed(2)} م³/ث<br>
+    🔧 الإجراء المقترح: إغلاق البوابات الأعلى فوراً وإخطار فرق الميدان
+  `;
+  // Flash red on topbar alerts
+  const el=document.getElementById('tbAlerts');
+  el.textContent='🆘';el.className='tb-mv bad';
+  setTimeout(()=>{updateTopbar();res.style.display='none';},8000);
+}
+
+
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    r=Math.min(r||0,Math.min(Math.abs(w),Math.abs(h))/2);
+    this.moveTo(x+r,y);
+    this.lineTo(x+w-r,y);this.arcTo(x+w,y,x+w,y+r,r);
+    this.lineTo(x+w,y+h-r);this.arcTo(x+w,y+h,x+w-r,y+h,r);
+    this.lineTo(x+r,y+h);this.arcTo(x,y+h,x,y+h-r,r);
+    this.lineTo(x,y+r);this.arcTo(x,y,x+r,y,r);
+    this.closePath();
+    return this;
+  };
+}
+
+/* ═══════════════════════════════════════
+   ADVISOR TAB — المستشار الهيدروليكى الذكى
+═══════════════════════════════════════ */
+
+const ADV_WEIRS = [
+  {
+    id: 'munshia',
+    name: 'حجز المنشية',
+    km: 16.27,
+    norm_up: 18.20,
+    norm_dn: 17.80,
+    desc: 'فاصل دور ب / جـ'
+  },
+  {
+    id: 'hawajir_weir',
+    name: 'حجز الحواجر',
+    km: 28.54,
+    norm_up: 17.00,
+    norm_dn: 16.60,
+    desc: 'فاصل دور جـ / أ'
+  },
+];
+
+const ADV_FOM_NORM = 19.50; // منسوب طبيعى لفم المنصورية
+
+let advDor = 'أ';
+let advWeirData = {}; // {id: {up, dn}}
+
+/* اختيار الدور */
+function advSetDor(dor) {
+  advDor = dor;
+  document.querySelectorAll('.adv-dor-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.dor === dor);
+  });
+  // تلوين حسب الدور
+  const colors = {'أ': 'var(--amber)', 'ب': 'var(--cyan)', 'جـ': 'var(--green)'};
+  document.querySelectorAll('.adv-dor-btn.active').forEach(b => b.style.color = colors[dor]);
+}
+
+/* بناء حقول الحجوزات ديناميكياً */
+function advBuildWeirs() {
+  const container = document.getElementById('advWeirsContainer');
+  container.innerHTML = ADV_WEIRS.map(w => `
+    <div class="adv-struct-row">
+      <div class="adv-struct-name">🔶 ${w.name} <span>ك${w.km} — ${w.desc}</span></div>
+      <div class="adv-inputs">
+        <div class="adv-input-wrap">
+          <div class="adv-input-lbl">منسوب أعلى — طبيعى: ${w.norm_up}م</div>
+          <div class="adv-input-row">
+            <input type="number" step="0.01" id="adv_${w.id}_up" placeholder="${w.norm_up}"
+              oninput="advCalcDiff('${w.id}','up',${w.norm_up})">
+            <span class="adv-diff" id="adv_${w.id}_up_diff"></span>
+          </div>
+        </div>
+        <div class="adv-input-wrap">
+          <div class="adv-input-lbl">منسوب أسفل — طبيعى: ${w.norm_dn}م</div>
+          <div class="adv-input-row">
+            <input type="number" step="0.01" id="adv_${w.id}_dn" placeholder="${w.norm_dn}"
+              oninput="advCalcDiff('${w.id}','dn',${w.norm_dn})">
+            <span class="adv-diff" id="adv_${w.id}_dn_diff"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* حساب الفرق وتلوينه */
+function advCalcDiff(id, side, norm) {
+  if (id === 'fom') {
+    const val = parseFloat(document.getElementById('advFomLevel').value);
+    const el = document.getElementById('advFomDiff');
+    if (isNaN(val)) { el.textContent = ''; return; }
+    const diff = val - ADV_FOM_NORM;
+    el.textContent = (diff >= 0 ? '▲' : '▼') + Math.abs(diff).toFixed(3);
+    el.className = 'adv-diff ' + (Math.abs(diff) < 0.05 ? 'ok' : diff > 0 ? 'warn' : 'bad');
+    return;
+  }
+  const val = parseFloat(document.getElementById(`adv_${id}_${side}`).value);
+  const el = document.getElementById(`adv_${id}_${side}_diff`);
+  if (isNaN(val)) { el.textContent = ''; return; }
+  const diff = val - norm;
+  el.textContent = (diff >= 0 ? '▲' : '▼') + Math.abs(diff).toFixed(3);
+  el.className = 'adv-diff ' + (Math.abs(diff) < 0.05 ? 'ok' : diff > 0 ? 'warn' : 'bad');
+}
+
+/* بناء البرومبت للـ AI */
+function advBuildPrompt() {
+  const fomLevel = document.getElementById('advFomLevel').value;
+  const fomQ = document.getElementById('advFomQ').value;
+  const cur = getCurrentRotation();
+
+  // معلومات الترع النشطة
+  const activeCanals = CANALS.filter(c => c.rotation === advDor && c.type !== 'main');
+  const totalFeddan = activeCanals.reduce((s, c) => s + c.feddan, 0);
+  const theoreticalQ = activeCanals.reduce((s, c) => s + c.Q, 0).toFixed(2);
+
+  let weirLines = '';
+  ADV_WEIRS.forEach(w => {
+    const upVal = document.getElementById(`adv_${w.id}_up`)?.value;
+    const dnVal = document.getElementById(`adv_${w.id}_dn`)?.value;
+    const upDiff = upVal ? (parseFloat(upVal) - w.norm_up).toFixed(3) : null;
+    const dnDiff = dnVal ? (parseFloat(dnVal) - w.norm_dn).toFixed(3) : null;
+    weirLines += `\n• ${w.name} (ك${w.km}) — ${w.desc}:\n`;
+    if (upVal) weirLines += `   - منسوب أعلى: ${upVal} م | طبيعى: ${w.norm_up} م | فرق: ${upDiff > 0 ? '+' : ''}${upDiff} م\n`;
+    if (dnVal) weirLines += `   - منسوب أسفل: ${dnVal} م | طبيعى: ${w.norm_dn} م | فرق: ${dnDiff > 0 ? '+' : ''}${dnDiff} م\n`;
+    if (!upVal && !dnVal) weirLines += `   - (لم يُدخل منسوب)\n`;
+  });
+
+  const fomLine = fomLevel
+    ? `• فم المنصورية (ك٠): منسوب ${fomLevel} م | طبيعى: ${ADV_FOM_NORM} م | فرق: ${(parseFloat(fomLevel) - ADV_FOM_NORM).toFixed(3)} م`
+    + (fomQ ? ` | تصرف فعلى: ${fomQ} م³/ث` : '')
+    : '• فم المنصورية: (لم يُدخل منسوب)';
+
+  return `أنت مهندس رى وهيدروليك خبير متخصص فى ترعة المنصورية (37 كم) بمحافظة الجيزة، مصر.
+مأخذها من ترعة الجيزة عند ك101.6. تحتوى على حجزين:
+- حجز المنشية ك16.27: يفصل دور ب (ك0→16.27) عن دور جـ (ك16.27→28.54)
+- حجز الحواجر ك28.54: يفصل دور جـ عن دور أ (ك28.54→37)
+
+جدول الدور الحالى: الدور ${cur.dor} — اليوم ${cur.dayNum} من ${cur.days}، ينتهى ${new Date(cur.end+'T00:00:00').toLocaleDateString('ar-EG',{day:'numeric',month:'long'})}
+
+دور العمالة المُختار للتحليل: الدور ${advDor}
+الترع النشطة فى دور ${advDor}: ${activeCanals.length} ترعة | إجمالى زمام: ${totalFeddan.toLocaleString()} فدان | Q نظرى: ${theoreticalQ} م³/ث
+
+المناسيب الفعلية المرصودة:
+${fomLine}
+${weirLines}
+
+المطلوب منك تحليل هيدروليكى مهنى مختصر يشمل:
+
+**١. تقييم الوضع الحالى**
+هل المناسيب طبيعية؟ وين الانحرافات وبكم؟
+
+**٢. تحليل التصرف والكفاية**
+هل التصرف كافى للدور ${advDor}؟ وهل يتناسب مع الزمام؟
+
+**٣. تعليمات تشغيل الحجوزات**
+ماذا تفعل بحجز المنشية وحجز الحواجر تحديداً؟ (فتح/غلق/ثبات وبكم سنتيمتر)
+
+**٤. أولويات توزيع دور العمالة**
+الترع التى تحتاج أولوية وأيهم يمكن تخفيض حصتها
+
+**٥. تحذيرات**
+أى مخاطر هيدروليكية أو تشغيلية
+
+**٦. الأمر الفورى — جملة واحدة**
+أهم إجراء يجب اتخاذه الآن
+
+اكتب بالعربية الفصحى المختصرة. استخدم مصطلحات هندسة الرى المصرية.`;
+}
+
+/* تحليل رئيسى */
+async function advAnalyze() {
+  const btn = document.getElementById('advAnalyzeBtn');
+  const resultArea = document.getElementById('advResultArea');
+
+  // تحقق: لازم فيه منسوب واحد على الأقل
+  const fomVal = document.getElementById('advFomLevel').value;
+  const hasWeir = ADV_WEIRS.some(w =>
+    document.getElementById(`adv_${w.id}_up`)?.value ||
+    document.getElementById(`adv_${w.id}_dn`)?.value
+  );
+  if (!fomVal && !hasWeir) {
+    resultArea.style.display = 'block';
+    resultArea.innerHTML = '<div class="adv-error">⚠️ أدخل منسوب واحد على الأقل قبل التحليل</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  resultArea.style.display = 'block';
+  resultArea.innerHTML = `
+    <div class="adv-loading">
+      <div class="adv-spinner"></div>
+      <span>جارى التحليل الهيدروليكى...</span>
+    </div>`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: advBuildPrompt() }]
+      })
+    });
+
+    const data = await response.json();
+    const text = (data.content || []).map(b => b.text || '').join('');
+
+    if (!text) throw new Error('لا توجد استجابة');
+
+    const cur = getCurrentRotation();
+    const html = text
+      .split('\n')
+      .map(line => {
+        const isSec = line.match(/^\*\*[١-٩\d]\./) || line.startsWith('**') && line.endsWith('**');
+        if (isSec) {
+          return '<span class="adv-section">' + line.replace(/\*\*/g, '') + '</span>';
+        }
+        return '<span>' + line.replace(/\*\*/g, '<b>').replace(/\*\*/g, '</b>') + '</span>';
+      })
+      .join('\n');
+
+    resultArea.innerHTML = `
+      <div class="adv-result">
+        <div class="adv-result-hdr">
+          <h3>📋 التقرير الهيدروليكى</h3>
+          <p>دور ${advDor} — اليوم ${cur.dayNum}/${cur.days}</p>
+        </div>
+        <div class="adv-result-body">${html}</div>
+      </div>`;
+
+  } catch (e) {
+    resultArea.innerHTML = `<div class="adv-error">❌ خطأ: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* تهيئة عند تحميل الصفحة */
+window.addEventListener('load', () => {
+  advBuildWeirs();
+  // ضبط الدور تلقائياً من جدول الأدوار
+  const cur = getCurrentRotation();
+  if (cur && cur.dor) {
+    advDor = cur.dor;
+    document.querySelectorAll('.adv-dor-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.dor === cur.dor);
+    });
+  }
+  // تهيئة باقى التبويبات
+  updateSkKpis();
+  updateTopbar();
+  hMode('bed');
+  setTimeout(()=>{
+    skResize();
+    setTimeout(()=>{ if(!S.skAnim) skToggleAnim(); }, 700);
+  }, 200);
+  setTimeout(skResize, 500);
+});
+window.addEventListener('resize',()=>{setTimeout(skResize,50);if(S.tab==='heat')setTimeout(drawHeat,50);});
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  const m={'1':'sankey','2':'nodes','3':'rotation','4':'heat','5':'hydraulics','6':'scenarios','7':'command','8':'advisor'};
+  if(m[e.key]) go(m[e.key]);
+  if(e.key==='Escape'){closeModal();closePanel();}
+});
+document.addEventListener('touchmove',e=>{
+  if(e.target.closest('#side-panel-body,.node-list,.rot-grid,.heat-table,.cmd-body,#hydBody,#tab-scenarios,#tab-advisor')) return;
+  if(e.target.closest('#skCanvas')) return;
+  e.preventDefault();
+},{passive:false});
+
+</script>
+</body>
+</html>
