@@ -1,4 +1,4 @@
-const CACHE = 'mansouriya-v7-20250407';
+const CACHE = 'mansouriya-v7-20250407-fix';
 const FILES = ['./index.html'];
 
 self.addEventListener('install', e => {

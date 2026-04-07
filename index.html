@@ -711,8 +711,11 @@ const ROTATION_SCHEDULE = [
 
 /* ── الدور الحالي والتالي (حسب التاريخ الفعلي) ── */
 function getTodayStr(){
-  // اليوم الفعلي = 6 أبريل 2026
-  return '2026-04-06';
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
 }
 function getCurrentRotation(){
   const today = getTodayStr();
