@@ -291,6 +291,7 @@ input[type=range]{width:100%;accent-color:var(--cyan)}
 .adv-dor-btn{padding:5px 14px;border-radius:6px;border:1px solid var(--ln);background:none;color:var(--tx3);font-family:'Cairo',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer;transition:all .15s}
 .adv-dor-btn.active{border-color:var(--cyan);background:rgba(0,229,255,.1);color:var(--cyan)}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="manifest" href="manifest.json">
 <script>
 if('serviceWorker' in navigator){
@@ -580,6 +581,22 @@ if('serviceWorker' in navigator){
     <p>أدخل المناسيب الفعلية ← تحليل فورى وتوصيات دور العمالة</p>
   </div>
   <div class="adv-body">
+
+    <!-- زرار تحميل Excel -->
+    <div class="adv-struct-row" style="border-color:rgba(0,230,118,.3);background:rgba(0,230,118,.04)">
+      <div class="adv-struct-name" style="color:var(--green)">📂 تحميل من ملف Excel <span>يأخذ آخر صف تلقائياً</span></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label for="advXlsxInput" style="
+          display:inline-flex;align-items:center;gap:6px;
+          padding:8px 16px;border-radius:7px;cursor:pointer;
+          background:rgba(0,230,118,.12);border:1px solid rgba(0,230,118,.3);
+          color:var(--green);font-size:.7rem;font-weight:700;font-family:'Cairo',sans-serif">
+          📁 اختر ملف .xlsx
+        </label>
+        <input type="file" id="advXlsxInput" accept=".xlsx,.xls" style="display:none" onchange="advLoadXlsx(this)">
+        <span id="advXlsxStatus" style="font-size:.6rem;color:var(--tx2)">لم يُحمَّل ملف</span>
+      </div>
+    </div>
 
     <!-- دور العمالة -->
     <div class="adv-struct-row">
@@ -2698,6 +2715,93 @@ function advAnalyze() {
         kpiHtml + levelRec + weirHtml + rotNote +
       '</div>' +
     '</div>';
+}
+
+/* ═══════════════════════════════════════
+   EXCEL LOADER — تحميل المناسيب من Excel
+   أعمدة المصدر (مقسومة على 100 → متر):
+   17: أمام فم المنصورية  | 18: خلف فم المنصورية
+   19: أمام حجز المنشية  | 20: خلف حجز المنشية
+   21: أمام حجز الحواجز  | 22: خلف حجز الحواجز
+   2:  دور العمالة
+═══════════════════════════════════════ */
+function advLoadXlsx(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('advXlsxStatus');
+  status.textContent = 'جارى القراءة...';
+  status.style.color = 'var(--amber)';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb   = XLSX.read(e.target.result, { type: 'array' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      // الصف الأول = headers، نبحث فيه عن أسماء الأعمدة
+      const headers = data[0].map(h => String(h || '').trim());
+      const colIdx = {
+        dor:      headers.indexOf('دور العمالة'),
+        fomUp:    headers.indexOf('أمام فم المنصورية'),
+        fomDn:    headers.indexOf('خلف فم المنصورية'),
+        munUp:    headers.indexOf('أمام حجز المنشية'),
+        munDn:    headers.indexOf('خلف حجز المنشية'),
+        hawUp:    headers.indexOf('أمام حجز الحواجز'),
+        hawDn:    headers.indexOf('خلف حجز الحواجز'),
+      };
+
+      // آخر صف يحتوى بيانات
+      let lastRow = null;
+      for (let i = data.length - 1; i >= 1; i--) {
+        if (data[i] && data[i][colIdx.fomUp]) { lastRow = data[i]; break; }
+      }
+      if (!lastRow) throw new Error('لم يُعثر على بيانات');
+
+      const get = (idx) => {
+        const raw = lastRow[idx];
+        if (!raw || isNaN(raw)) return '';
+        return (parseFloat(raw) / 100).toFixed(2);
+      };
+
+      // ملء الحقول
+      document.getElementById('advFomLevel').value = get(colIdx.fomUp);
+      // خلف فم المنصورية → حقل التصرف مش موجود، نتجاهله
+
+      const munUpEl = document.getElementById('adv_munshia_up');
+      const munDnEl = document.getElementById('adv_munshia_dn');
+      const hawUpEl = document.getElementById('adv_hawajir_weir_up');
+      const hawDnEl = document.getElementById('adv_hawajir_weir_dn');
+
+      if (munUpEl) munUpEl.value = get(colIdx.munUp);
+      if (munDnEl) munDnEl.value = get(colIdx.munDn);
+      if (hawUpEl) hawUpEl.value = get(colIdx.hawUp);
+      if (hawDnEl) hawDnEl.value = get(colIdx.hawDn);
+
+      // تحديث الفروق
+      advCalcDiff('fom');
+      ADV_WEIRS.forEach(w => {
+        advCalcDiff(w.id, 'up', w.norm_up);
+        advCalcDiff(w.id, 'dn', w.norm_dn);
+      });
+
+      // ضبط دور العمالة تلقائياً
+      if (colIdx.dor >= 0 && lastRow[colIdx.dor]) {
+        const dorRaw = String(lastRow[colIdx.dor]).trim();
+        const dorMap = {'دور أ':'أ','دور ب':'ب','دور جـ':'جـ','دور ج':'جـ'};
+        const dor = dorMap[dorRaw] || null;
+        if (dor) advSetDor(dor);
+      }
+
+      status.textContent = '✅ تم التحميل — ' + file.name;
+      status.style.color = 'var(--green)';
+
+    } catch(err) {
+      status.textContent = '❌ خطأ: ' + err.message;
+      status.style.color = 'var(--red)';
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 /* تهيئة عند تحميل الصفحة */
